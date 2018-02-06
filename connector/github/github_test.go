@@ -30,7 +30,7 @@ func TestUserGroups(t *testing.T) {
 	})
 
 	connector := githubConnector{apiURL: s.URL}
-	groups, err := connector.userGroups(context.Background(), s.Client())
+	groups, err := connector.userGroups(context.Background(), &http.Client{})
 
 	expectNil(t, err)
 	expectEquals(t, groups, []string{
@@ -52,7 +52,7 @@ func TestUserGroupsWithoutOrgs(t *testing.T) {
 	})
 
 	connector := githubConnector{apiURL: s.URL}
-	groups, err := connector.userGroups(context.Background(), s.Client())
+	groups, err := connector.userGroups(context.Background(), &http.Client{})
 
 	expectNil(t, err)
 	expectEquals(t, len(groups), 0)
