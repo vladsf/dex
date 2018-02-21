@@ -14,12 +14,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/felixge/httpsnoop"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/dexidp/dex/connector"
 	"github.com/dexidp/dex/connector/authproxy"
 	"github.com/dexidp/dex/connector/bitbucketcloud"
@@ -36,6 +30,11 @@ import (
 	"github.com/dexidp/dex/connector/saml"
 	"github.com/dexidp/dex/pkg/log"
 	"github.com/dexidp/dex/storage"
+	"github.com/felixge/httpsnoop"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // LocalConnector is the local passwordDB connector which is an internal
@@ -236,21 +235,29 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 		}
 	}
 
-	requestCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "http_requests_total",
-		Help: "Count of all HTTP requests.",
-	}, []string{"handler", "code", "method"})
-
-	err = c.PrometheusRegistry.Register(requestCounter)
-	if err != nil {
-		return nil, fmt.Errorf("server: Failed to register Prometheus HTTP metrics: %v", err)
-	}
-
 	instrumentHandlerCounter := func(handlerName string, handler http.Handler) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			m := httpsnoop.CaptureMetrics(handler, w, r)
-			requestCounter.With(prometheus.Labels{"handler": handlerName, "code": strconv.Itoa(m.Code), "method": r.Method}).Inc()
+			handler.ServeHTTP(w, r)
 		})
+	}
+
+	if c.PrometheusRegistry != nil {
+		requestCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Count of all HTTP requests.",
+		}, []string{"handler", "code", "method"})
+
+		err = c.PrometheusRegistry.Register(requestCounter)
+		if err != nil {
+			return nil, fmt.Errorf("server: Failed to register Prometheus HTTP metrics: %v", err)
+		}
+
+		instrumentHandlerCounter = func(handlerName string, handler http.Handler) http.HandlerFunc {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				m := httpsnoop.CaptureMetrics(handler, w, r)
+				requestCounter.With(prometheus.Labels{"handler": handlerName, "code": strconv.Itoa(m.Code), "method": r.Method}).Inc()
+			})
+		}
 	}
 
 	r := mux.NewRouter()
