@@ -1023,7 +1023,7 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
 		switch scope {
 		case scopeOpenID:
 			hasOpenIDScope = true
-		case scopeOfflineAccess, scopeEmail, scopeProfile, scopeGroups:
+		case scopeOfflineAccess, scopeEmail, scopeProfile, scopeGroups, scopeFederatedID:
 		default:
 			peerID, ok := parseCrossClientScope(scope)
 			if !ok {
