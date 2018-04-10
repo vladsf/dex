@@ -14,11 +14,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/dexidp/dex/connector"
 	"github.com/dexidp/dex/connector/authproxy"
 	"github.com/dexidp/dex/connector/bitbucketcloud"
+	"github.com/dexidp/dex/connector/cf"
 	"github.com/dexidp/dex/connector/github"
 	"github.com/dexidp/dex/connector/gitlab"
 	"github.com/dexidp/dex/connector/keystone"
@@ -34,6 +33,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // LocalConnector is the local passwordDB connector which is an internal
@@ -448,6 +448,7 @@ var ConnectorsConfig = map[string]func() ConnectorConfig{
 	"linkedin":        func() ConnectorConfig { return new(linkedin.Config) },
 	"microsoft":       func() ConnectorConfig { return new(microsoft.Config) },
 	"bitbucket-cloud": func() ConnectorConfig { return new(bitbucketcloud.Config) },
+	"cf":              func() ConnectorConfig { return new(cf.Config) },
 	// Keep around for backwards compatibility.
 	"samlExperimental": func() ConnectorConfig { return new(saml.Config) },
 }
