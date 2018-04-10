@@ -14,19 +14,19 @@ import (
 	"time"
 
 	"github.com/coreos/dex/connector"
-	oidc "github.com/coreos/go-oidc"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
 
 type cfConnector struct {
-	clientID     string
-	clientSecret string
-	redirectURI  string
-	apiURL       string
-	rootCAs      []string
-	httpClient   *http.Client
-	provider     *oidc.Provider
+	clientID         string
+	clientSecret     string
+	redirectURI      string
+	apiURL           string
+	tokenURL         string
+	authorizationURL string
+	userinfoURL      string
+	httpClient       *http.Client
 }
 
 type connectorData struct {
@@ -34,50 +34,60 @@ type connectorData struct {
 }
 
 type Config struct {
-	ClientID     string   `json:"clientID"`
-	ClientSecret string   `json:"clientSecret"`
-	RedirectURI  string   `json:"redirectURI"`
-	APIURL       string   `json:"apiURL"`
-	RootCAs      []string `json:"rootCAs"`
+	ClientID           string   `json:"clientID"`
+	ClientSecret       string   `json:"clientSecret"`
+	RedirectURI        string   `json:"redirectURI"`
+	APIURL             string   `json:"apiURL"`
+	RootCAs            []string `json:"rootCAs"`
+	InsecureSkipVerify bool     `json:"insecureSkipVerify"`
 }
 
 func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector, error) {
 	var err error
 
-	cfConn := cfConnector{
+	cfConn := &cfConnector{
 		clientID:     c.ClientID,
 		clientSecret: c.ClientSecret,
 		apiURL:       c.APIURL,
 		redirectURI:  c.RedirectURI,
 	}
 
-	cfConn.httpClient, err = newHTTPClient(c.RootCAs)
+	cfConn.httpClient, err = newHTTPClient(c.RootCAs, c.InsecureSkipVerify)
 	if err != nil {
 		return nil, err
 	}
 
 	apiURL := strings.TrimRight(c.APIURL, "/")
-	resp, err := cfConn.httpClient.Get(fmt.Sprintf("%s/v2/info", apiURL))
+	apiResp, err := cfConn.httpClient.Get(fmt.Sprintf("%s/v2/info", apiURL))
 	if err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer apiResp.Body.Close()
 
-	var result map[string]string
-	json.NewDecoder(resp.Body).Decode(&result)
+	var apiResult map[string]interface{}
+	json.NewDecoder(apiResp.Body).Decode(&apiResult)
 
-	ctx := oidc.ClientContext(context.Background(), cfConn.httpClient)
-	cfConn.provider, err = oidc.NewProvider(ctx, result["authorization_endpoint"])
+	uaaURL := strings.TrimRight(apiResult["token_endpoint"].(string), "/")
+	uaaResp, err := cfConn.httpClient.Get(fmt.Sprintf("%s/.well-known/openid-configuration", uaaURL))
 	if err != nil {
 		return nil, err
 	}
+
+	defer uaaResp.Body.Close()
+
+	var uaaResult map[string]interface{}
+	json.NewDecoder(uaaResp.Body).Decode(&uaaResult)
+
+	cfConn.tokenURL = uaaResult["token_endpoint"].(string)
+	cfConn.authorizationURL = uaaResult["authorization_endpoint"].(string)
+	cfConn.userinfoURL = uaaResult["userinfo_endpoint"].(string)
 
 	return cfConn, err
 }
 
-func newHTTPClient(rootCAs []string) (*http.Client, error) {
-	tlsConfig := tls.Config{RootCAs: x509.NewCertPool()}
+func newHTTPClient(rootCAs []string, insecureSkipVerify bool) (*http.Client, error) {
+	tlsConfig := tls.Config{RootCAs: x509.NewCertPool(), InsecureSkipVerify: insecureSkipVerify}
 	for _, rootCA := range rootCAs {
 		rootCABytes, err := ioutil.ReadFile(rootCA)
 		if err != nil {
@@ -114,8 +124,9 @@ func (c *cfConnector) LoginURL(scopes connector.Scopes, callbackURL, state strin
 	oauth2Config := &oauth2.Config{
 		ClientID:     c.clientID,
 		ClientSecret: c.clientSecret,
-		Endpoint:     c.provider.Endpoint(),
-		Scopes:       []string{"openid", "profile", "email"},
+		Endpoint:     oauth2.Endpoint{TokenURL: c.tokenURL, AuthURL: c.authorizationURL},
+		RedirectURL:  c.redirectURI,
+		Scopes:       []string{"openid", "cloud_controller.read"},
 	}
 
 	return oauth2Config.AuthCodeURL(state), nil
@@ -130,32 +141,43 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 	oauth2Config := &oauth2.Config{
 		ClientID:     c.clientID,
 		ClientSecret: c.clientSecret,
-		Endpoint:     c.provider.Endpoint(),
-		Scopes:       []string{"openid", "profile", "email"},
+		Endpoint:     oauth2.Endpoint{TokenURL: c.tokenURL, AuthURL: c.authorizationURL},
+		RedirectURL:  c.redirectURI,
+		Scopes:       []string{"openid", "cloud_controller.read"},
 	}
 
 	ctx := context.WithValue(r.Context(), oauth2.HTTPClient, c.httpClient)
 
 	token, err := oauth2Config.Exchange(ctx, q.Get("code"))
 	if err != nil {
-		return identity, fmt.Errorf("cfConnector: failed to get token: %v", err)
+		return identity, fmt.Errorf("CF onnector: failed to get token: %v", err)
 	}
 
-	userInfo, err := c.provider.UserInfo(ctx, oauth2.StaticTokenSource(token))
+	req, err := http.NewRequest("GET", c.userinfoURL, nil)
 	if err != nil {
-		return identity, fmt.Errorf("cfconnector: failed to get userinfo: %v", err)
+		return identity, fmt.Errorf("CF Connector: failed to create request: %v", err)
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
+
+	userInfoResp, err := c.httpClient.Do(req)
+	if err != nil {
+		return identity, err
 	}
 
-	fmt.Println("REM ===> ", userInfo)
+	defer userInfoResp.Body.Close()
+
+	var userInfoResult map[string]interface{}
+	json.NewDecoder(userInfoResp.Body).Decode(&userInfoResult)
 
 	identity = connector.Identity{
-		UserID: userInfo.Subject,
-		Email:  userInfo.Email,
+		UserID:   userInfoResult["user_id"].(string),
+		Username: userInfoResult["user_name"].(string),
+		Email:    userInfoResult["email"].(string),
 	}
 
 	if s.Groups {
 		// fetch orgs
-		orgsResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/organizations", c.apiURL, userInfo.Subject))
+		orgsResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/organizations", c.apiURL, identity.UserID))
 		if err != nil {
 			return identity, err
 		}
@@ -167,8 +189,8 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 			return identity, err
 		}
 
-		var orgMap map[string]string
-		var orgSpaces map[string][]string
+		var orgMap = make(map[string]string)
+		var orgSpaces = make(map[string][]string)
 
 		for _, resource := range orgs.Resources {
 			orgMap[resource.Metadata.Guid] = resource.Entity.Name
@@ -176,7 +198,7 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 		}
 
 		// fetch spaces
-		spacesResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/spaces", c.apiURL, userInfo.Subject))
+		spacesResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/spaces", c.apiURL, identity.UserID))
 		if err != nil {
 			return identity, err
 		}
@@ -198,7 +220,7 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 		for orgName, spaceNames := range orgSpaces {
 			if len(spaceNames) > 0 {
 				for _, spaceName := range spaceNames {
-					groupsClaims = append(groupsClaims, fmt.Sprintf("%s:%", orgName, spaceName))
+					groupsClaims = append(groupsClaims, fmt.Sprintf("%s:%s", orgName, spaceName))
 				}
 			} else {
 				groupsClaims = append(groupsClaims, fmt.Sprintf("%s", orgName))

@@ -24,6 +24,7 @@ import (
 
 	"github.com/coreos/dex/connector"
 	"github.com/coreos/dex/connector/authproxy"
+	"github.com/coreos/dex/connector/cf"
 	"github.com/coreos/dex/connector/github"
 	"github.com/coreos/dex/connector/gitlab"
 	"github.com/coreos/dex/connector/ldap"
@@ -444,6 +445,7 @@ var ConnectorsConfig = map[string]func() ConnectorConfig{
 	"gitlab":       func() ConnectorConfig { return new(gitlab.Config) },
 	"oidc":         func() ConnectorConfig { return new(oidc.Config) },
 	"saml":         func() ConnectorConfig { return new(saml.Config) },
+	"cf":           func() ConnectorConfig { return new(cf.Config) },
 	"authproxy":    func() ConnectorConfig { return new(authproxy.Config) },
 	"linkedin":     func() ConnectorConfig { return new(linkedin.Config) },
 	"microsoft":    func() ConnectorConfig { return new(microsoft.Config) },
