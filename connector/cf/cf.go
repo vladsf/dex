@@ -1,0 +1,240 @@
+package cf
+
+import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/coreos/dex/connector"
+	oidc "github.com/coreos/go-oidc"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
+)
+
+type cfConnector struct {
+	clientID     string
+	clientSecret string
+	redirectURI  string
+	apiURL       string
+	rootCAs      []string
+	httpClient   *http.Client
+	provider     *oidc.Provider
+}
+
+type connectorData struct {
+	AccessToken string
+}
+
+type Config struct {
+	ClientID     string   `json:"clientID"`
+	ClientSecret string   `json:"clientSecret"`
+	RedirectURI  string   `json:"redirectURI"`
+	APIURL       string   `json:"apiURL"`
+	RootCAs      []string `json:"rootCAs"`
+}
+
+func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector, error) {
+	var err error
+
+	cfConn := cfConnector{
+		clientID:     c.ClientID,
+		clientSecret: c.ClientSecret,
+		apiURL:       c.APIURL,
+		redirectURI:  c.RedirectURI,
+	}
+
+	cfConn.httpClient, err = newHTTPClient(c.RootCAs)
+	if err != nil {
+		return nil, err
+	}
+
+	apiURL := strings.TrimRight(c.APIURL, "/")
+	resp, err := cfConn.httpClient.Get(fmt.Sprintf("%s/v2/info", apiURL))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	var result map[string]string
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	ctx := oidc.ClientContext(context.Background(), cfConn.httpClient)
+	cfConn.provider, err = oidc.NewProvider(ctx, result["authorization_endpoint"])
+	if err != nil {
+		return nil, err
+	}
+
+	return cfConn, err
+}
+
+func newHTTPClient(rootCAs []string) (*http.Client, error) {
+	tlsConfig := tls.Config{RootCAs: x509.NewCertPool()}
+	for _, rootCA := range rootCAs {
+		rootCABytes, err := ioutil.ReadFile(rootCA)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read root-ca: %v", err)
+		}
+		if !tlsConfig.RootCAs.AppendCertsFromPEM(rootCABytes) {
+			return nil, fmt.Errorf("no certs found in root CA file %q", rootCA)
+		}
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tlsConfig,
+			Proxy:           http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}, nil
+}
+
+func (c *cfConnector) LoginURL(scopes connector.Scopes, callbackURL, state string) (string, error) {
+
+	if c.redirectURI != callbackURL {
+		return "", fmt.Errorf("expected callback URL %q did not match the URL in the config %q", callbackURL, c.redirectURI)
+	}
+
+	oauth2Config := &oauth2.Config{
+		ClientID:     c.clientID,
+		ClientSecret: c.clientSecret,
+		Endpoint:     c.provider.Endpoint(),
+		Scopes:       []string{"openid", "profile", "email"},
+	}
+
+	return oauth2Config.AuthCodeURL(state), nil
+}
+
+func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (identity connector.Identity, err error) {
+	q := r.URL.Query()
+	if errType := q.Get("error"); errType != "" {
+		return identity, errors.New(q.Get("error_description"))
+	}
+
+	oauth2Config := &oauth2.Config{
+		ClientID:     c.clientID,
+		ClientSecret: c.clientSecret,
+		Endpoint:     c.provider.Endpoint(),
+		Scopes:       []string{"openid", "profile", "email"},
+	}
+
+	ctx := context.WithValue(r.Context(), oauth2.HTTPClient, c.httpClient)
+
+	token, err := oauth2Config.Exchange(ctx, q.Get("code"))
+	if err != nil {
+		return identity, fmt.Errorf("cfConnector: failed to get token: %v", err)
+	}
+
+	userInfo, err := c.provider.UserInfo(ctx, oauth2.StaticTokenSource(token))
+	if err != nil {
+		return identity, fmt.Errorf("cfconnector: failed to get userinfo: %v", err)
+	}
+
+	fmt.Println("REM ===> ", userInfo)
+
+	identity = connector.Identity{
+		UserID: userInfo.Subject,
+		Email:  userInfo.Email,
+	}
+
+	if s.Groups {
+		// fetch orgs
+		orgsResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/organizations", c.apiURL, userInfo.Subject))
+		if err != nil {
+			return identity, err
+		}
+
+		var orgs CCResponse
+
+		err = json.NewDecoder(orgsResp.Body).Decode(&orgs)
+		if err != nil {
+			return identity, err
+		}
+
+		var orgMap map[string]string
+		var orgSpaces map[string][]string
+
+		for _, resource := range orgs.Resources {
+			orgMap[resource.Metadata.Guid] = resource.Entity.Name
+			orgSpaces[resource.Entity.Name] = []string{}
+		}
+
+		// fetch spaces
+		spacesResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/spaces", c.apiURL, userInfo.Subject))
+		if err != nil {
+			return identity, err
+		}
+
+		var spaces CCResponse
+
+		err = json.NewDecoder(spacesResp.Body).Decode(&spaces)
+		if err != nil {
+			return identity, err
+		}
+
+		for _, resource := range spaces.Resources {
+			orgName := orgMap[resource.Entity.OrganizationGuid]
+			orgSpaces[orgName] = append(orgSpaces[orgName], resource.Entity.Name)
+		}
+
+		var groupsClaims []string
+
+		for orgName, spaceNames := range orgSpaces {
+			if len(spaceNames) > 0 {
+				for _, spaceName := range spaceNames {
+					groupsClaims = append(groupsClaims, fmt.Sprintf("%s:%", orgName, spaceName))
+				}
+			} else {
+				groupsClaims = append(groupsClaims, fmt.Sprintf("%s", orgName))
+			}
+		}
+
+		identity.Groups = groupsClaims
+	}
+
+	if s.OfflineAccess {
+		data := connectorData{AccessToken: token.AccessToken}
+		connData, err := json.Marshal(data)
+		if err != nil {
+			return identity, fmt.Errorf("marshal connector data: %v", err)
+		}
+		identity.ConnectorData = connData
+	}
+
+	return identity, nil
+}
+
+type CCResponse struct {
+	Resources    []Resource `json:"resources"`
+	TotalResults int        `json:"total_results"`
+}
+
+type Resource struct {
+	Metadata Metadata `json:"metadata"`
+	Entity   Entity   `json:"entity"`
+}
+
+type Metadata struct {
+	Guid string `json:"guid"`
+}
+
+type Entity struct {
+	Name             string `json:"name"`
+	OrganizationGuid string `json:"organization_guid"`
+}
