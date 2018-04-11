@@ -88,7 +88,7 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 
 	defer apiResp.Body.Close()
 
-	if apiResp.StatusCode != 200 {
+	if apiResp.StatusCode != http.StatusOK {
 		err = errors.New(fmt.Sprintf("request failed with status %d", apiResp.StatusCode))
 		logger.Errorf("failed-get-info-response-from-api", err)
 		return nil, err
@@ -105,7 +105,7 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 		return nil, err
 	}
 
-	if apiResp.StatusCode != 200 {
+	if apiResp.StatusCode != http.StatusOK {
 		err = errors.New(fmt.Sprintf("request failed with status %d", apiResp.StatusCode))
 		logger.Errorf("failed-to-get-well-known-config-repsonse-from-api", err)
 		return nil, err
@@ -203,6 +203,10 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 		return identity, fmt.Errorf("CF Connector: failed to execute request to userinfo: %v", err)
 	}
 
+	if userInfoResp.StatusCode != http.StatusOK {
+		return identity, fmt.Errorf("CF Connector: failed to execute request to userinfo: status %d", userInfoResp.StatusCode)
+	}
+
 	defer userInfoResp.Body.Close()
 
 	var userInfoResult map[string]interface{}
@@ -222,6 +226,9 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 		orgsResp, err := client.Get(fmt.Sprintf("%s/v2/users/%s/organizations", c.apiURL, identity.UserID))
 		if err != nil {
 			return identity, fmt.Errorf("CF Connector: failed to execute request for orgs: %v", err)
+		}
+		if orgsResp.StatusCode != http.StatusOK {
+			return identity, fmt.Errorf("CF Connector: failed to execute request for orgs: status %d", orgsResp.StatusCode)
 		}
 
 		var orgs CCResponse
@@ -243,6 +250,9 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 		spacesResp, err := client.Get(fmt.Sprintf("%s/v2/users/%s/spaces", c.apiURL, identity.UserID))
 		if err != nil {
 			return identity, fmt.Errorf("CF Connector: failed to execute request for spaces: %v", err)
+		}
+		if spacesResp.StatusCode != http.StatusOK {
+			return identity, fmt.Errorf("CF Connector: failed to execute request for spaces: status %d", spacesResp.StatusCode)
 		}
 
 		var spaces CCResponse
