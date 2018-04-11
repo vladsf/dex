@@ -27,6 +27,7 @@ type cfConnector struct {
 	authorizationURL string
 	userinfoURL      string
 	httpClient       *http.Client
+	logger           logrus.FieldLogger
 }
 
 type connectorData struct {
@@ -42,6 +43,25 @@ type Config struct {
 	InsecureSkipVerify bool     `json:"insecureSkipVerify"`
 }
 
+type CCResponse struct {
+	Resources    []Resource `json:"resources"`
+	TotalResults int        `json:"total_results"`
+}
+
+type Resource struct {
+	Metadata Metadata `json:"metadata"`
+	Entity   Entity   `json:"entity"`
+}
+
+type Metadata struct {
+	Guid string `json:"guid"`
+}
+
+type Entity struct {
+	Name             string `json:"name"`
+	OrganizationGuid string `json:"organization_guid"`
+}
+
 func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector, error) {
 	var err error
 
@@ -50,6 +70,7 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 		clientSecret: c.ClientSecret,
 		apiURL:       c.APIURL,
 		redirectURI:  c.RedirectURI,
+		logger:       logger,
 	}
 
 	cfConn.httpClient, err = newHTTPClient(c.RootCAs, c.InsecureSkipVerify)
@@ -59,29 +80,50 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 
 	apiURL := strings.TrimRight(c.APIURL, "/")
 	apiResp, err := cfConn.httpClient.Get(fmt.Sprintf("%s/v2/info", apiURL))
+
 	if err != nil {
+		logger.Errorf("failed-to-send-request-to-cloud-controller-api", err)
 		return nil, err
 	}
 
 	defer apiResp.Body.Close()
+
+	if apiResp.StatusCode != 200 {
+		err = errors.New(fmt.Sprintf("request failed with status %d", apiResp.StatusCode))
+		logger.Errorf("failed-get-info-response-from-api", err)
+		return nil, err
+	}
 
 	var apiResult map[string]interface{}
 	json.NewDecoder(apiResp.Body).Decode(&apiResult)
 
 	uaaURL := strings.TrimRight(apiResult["token_endpoint"].(string), "/")
 	uaaResp, err := cfConn.httpClient.Get(fmt.Sprintf("%s/.well-known/openid-configuration", uaaURL))
+
 	if err != nil {
+		logger.Errorf("failed-to-send-request-to-uaa-api", err)
+		return nil, err
+	}
+
+	if apiResp.StatusCode != 200 {
+		err = errors.New(fmt.Sprintf("request failed with status %d", apiResp.StatusCode))
+		logger.Errorf("failed-to-get-well-known-config-repsonse-from-api", err)
 		return nil, err
 	}
 
 	defer uaaResp.Body.Close()
 
 	var uaaResult map[string]interface{}
-	json.NewDecoder(uaaResp.Body).Decode(&uaaResult)
+	err = json.NewDecoder(uaaResp.Body).Decode(&uaaResult)
 
-	cfConn.tokenURL = uaaResult["token_endpoint"].(string)
-	cfConn.authorizationURL = uaaResult["authorization_endpoint"].(string)
-	cfConn.userinfoURL = uaaResult["userinfo_endpoint"].(string)
+	if err != nil {
+		logger.Errorf("failed-to-decode-response-from-uaa-api", err)
+		return nil, err
+	}
+
+	cfConn.tokenURL, _ = uaaResult["token_endpoint"].(string)
+	cfConn.authorizationURL, _ = uaaResult["authorization_endpoint"].(string)
+	cfConn.userinfoURL, _ = uaaResult["userinfo_endpoint"].(string)
 
 	return cfConn, err
 }
@@ -133,6 +175,7 @@ func (c *cfConnector) LoginURL(scopes connector.Scopes, callbackURL, state strin
 }
 
 func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (identity connector.Identity, err error) {
+
 	q := r.URL.Query()
 	if errType := q.Get("error"); errType != "" {
 		return identity, errors.New(q.Get("error_description"))
@@ -150,43 +193,42 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 
 	token, err := oauth2Config.Exchange(ctx, q.Get("code"))
 	if err != nil {
-		return identity, fmt.Errorf("CF onnector: failed to get token: %v", err)
+		return identity, fmt.Errorf("CF connector: failed to get token: %v", err)
 	}
 
-	req, err := http.NewRequest("GET", c.userinfoURL, nil)
-	if err != nil {
-		return identity, fmt.Errorf("CF Connector: failed to create request: %v", err)
-	}
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token.AccessToken))
+	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
 
-	userInfoResp, err := c.httpClient.Do(req)
+	userInfoResp, err := client.Get(c.userinfoURL)
 	if err != nil {
-		return identity, err
+		return identity, fmt.Errorf("CF Connector: failed to execute request to userinfo: %v", err)
 	}
 
 	defer userInfoResp.Body.Close()
 
 	var userInfoResult map[string]interface{}
-	json.NewDecoder(userInfoResp.Body).Decode(&userInfoResult)
+	err = json.NewDecoder(userInfoResp.Body).Decode(&userInfoResult)
 
-	identity = connector.Identity{
-		UserID:   userInfoResult["user_id"].(string),
-		Username: userInfoResult["user_name"].(string),
-		Email:    userInfoResult["email"].(string),
+	if err != nil {
+		return identity, fmt.Errorf("CF Connector: failed to parse userinfo: %v", err)
 	}
+
+	identity.UserID, _ = userInfoResult["user_id"].(string)
+	identity.Username, _ = userInfoResult["user_name"].(string)
+	identity.Email, _ = userInfoResult["email"].(string)
+	identity.EmailVerified, _ = userInfoResult["email_verified"].(bool)
 
 	if s.Groups {
 		// fetch orgs
-		orgsResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/organizations", c.apiURL, identity.UserID))
+		orgsResp, err := client.Get(fmt.Sprintf("%s/v2/users/%s/organizations", c.apiURL, identity.UserID))
 		if err != nil {
-			return identity, err
+			return identity, fmt.Errorf("CF Connector: failed to execute request for orgs: %v", err)
 		}
 
 		var orgs CCResponse
 
 		err = json.NewDecoder(orgsResp.Body).Decode(&orgs)
 		if err != nil {
-			return identity, err
+			return identity, fmt.Errorf("CF Connector: failed to parse orgs: %v", err)
 		}
 
 		var orgMap = make(map[string]string)
@@ -198,16 +240,16 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 		}
 
 		// fetch spaces
-		spacesResp, err := c.httpClient.Get(fmt.Sprintf("%s/v2/users/%s/spaces", c.apiURL, identity.UserID))
+		spacesResp, err := client.Get(fmt.Sprintf("%s/v2/users/%s/spaces", c.apiURL, identity.UserID))
 		if err != nil {
-			return identity, err
+			return identity, fmt.Errorf("CF Connector: failed to execute request for spaces: %v", err)
 		}
 
 		var spaces CCResponse
 
 		err = json.NewDecoder(spacesResp.Body).Decode(&spaces)
 		if err != nil {
-			return identity, err
+			return identity, fmt.Errorf("CF Connector: failed to parse spaces: %v", err)
 		}
 
 		for _, resource := range spaces.Resources {
@@ -234,29 +276,10 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 		data := connectorData{AccessToken: token.AccessToken}
 		connData, err := json.Marshal(data)
 		if err != nil {
-			return identity, fmt.Errorf("marshal connector data: %v", err)
+			return identity, fmt.Errorf("CF Connector: failed to parse connector data for offline access: %v", err)
 		}
 		identity.ConnectorData = connData
 	}
 
 	return identity, nil
-}
-
-type CCResponse struct {
-	Resources    []Resource `json:"resources"`
-	TotalResults int        `json:"total_results"`
-}
-
-type Resource struct {
-	Metadata Metadata `json:"metadata"`
-	Entity   Entity   `json:"entity"`
-}
-
-type Metadata struct {
-	Guid string `json:"guid"`
-}
-
-type Entity struct {
-	Name             string `json:"name"`
-	OrganizationGuid string `json:"organization_guid"`
 }
