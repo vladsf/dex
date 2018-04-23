@@ -2,11 +2,15 @@ package github
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"testing"
+
+	"github.com/coreos/dex/connector"
 )
 
 func TestUserGroups(t *testing.T) {
@@ -30,7 +34,7 @@ func TestUserGroups(t *testing.T) {
 	})
 
 	connector := githubConnector{apiURL: s.URL}
-	groups, err := connector.userGroups(context.Background(), &http.Client{})
+	groups, err := connector.userGroups(context.Background(), newClient())
 
 	expectNil(t, err)
 	expectEquals(t, groups, []string{
@@ -52,7 +56,7 @@ func TestUserGroupsWithoutOrgs(t *testing.T) {
 	})
 
 	connector := githubConnector{apiURL: s.URL}
-	groups, err := connector.userGroups(context.Background(), &http.Client{})
+	groups, err := connector.userGroups(context.Background(), newClient())
 
 	expectNil(t, err)
 	expectEquals(t, len(groups), 0)
@@ -60,10 +64,48 @@ func TestUserGroupsWithoutOrgs(t *testing.T) {
 	s.Close()
 }
 
+func TestUsernameIncludedInFederatedIdentity(t *testing.T) {
+
+	s := newTestServer(map[string]interface{}{
+		"/user": user{Login: "some-login"},
+		"/user/emails": []userEmail{{
+			Email:    "some@email.com",
+			Verified: true,
+			Primary:  true,
+		}},
+		"/login/oauth/access_token": map[string]interface{}{
+			"access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
+			"expires_in":   "30",
+		},
+	})
+
+	hostURL, err := url.Parse(s.URL)
+	expectNil(t, err)
+
+	req, err := http.NewRequest("GET", hostURL.String(), nil)
+	expectNil(t, err)
+
+	githubConnector := githubConnector{apiURL: s.URL, hostName: hostURL.Host, httpClient: newClient()}
+	identity, err := githubConnector.HandleCallback(connector.Scopes{}, req)
+
+	expectNil(t, err)
+	expectEquals(t, identity.Username, "some-login")
+
+	s.Close()
+}
+
 func newTestServer(responses map[string]interface{}) *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(responses[r.URL.Path])
 	}))
+}
+
+func newClient() *http.Client {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	return &http.Client{Transport: tr}
 }
 
 func expectNil(t *testing.T, a interface{}) {

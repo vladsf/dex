@@ -217,6 +217,7 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 	}
 
 	identity.UserID, _ = userInfoResult["user_id"].(string)
+	identity.Name, _ = userInfoResult["user_name"].(string)
 	identity.Username, _ = userInfoResult["user_name"].(string)
 	identity.Email, _ = userInfoResult["email"].(string)
 	identity.EmailVerified, _ = userInfoResult["email_verified"].(bool)
