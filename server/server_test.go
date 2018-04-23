@@ -91,7 +91,7 @@ func newTestServer(ctx context.Context, t *testing.T, updateConfig func(c *Confi
 		Issuer:  s.URL,
 		Storage: memory.New(logger),
 		Web: WebConfig{
-			Dir: filepath.Join(os.Getenv("GOPATH"), "src/github.com/coreos/dex/web"),
+			Dir: http.Dir(filepath.Join(os.Getenv("GOPATH"), "src/github.com/coreos/dex/web")),
 		},
 		Logger:             logger,
 		PrometheusRegistry: prometheus.NewRegistry(),
