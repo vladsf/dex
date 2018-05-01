@@ -171,11 +171,11 @@ func TestHandleCallback(t *testing.T) {
 			t.Fatal("groups not populated")
 		}
 
-		if identity.Groups[0] != "some-org-name:some-space-name" {
-			t.Fatal("groups with org-name:space-name did not match; recieved ", identity.Groups[0])
+		if !contains(identity.Groups, "some-org-name:some-space-name") {
+			t.Fatal("groups with does not contain 'some-org-name:some-space-name'", identity.Groups)
 		}
-		if identity.Groups[1] != "some-org-name-2" {
-			t.Fatal("groups with only org name did not match; recieved ", identity.Groups[1])
+		if !contains(identity.Groups, "some-org-name-2") {
+			t.Fatal("groups with does not contain 'some-org-name-2'", identity.Groups)
 		}
 	})
 
@@ -213,4 +213,13 @@ func TestHandleCallback(t *testing.T) {
 			t.Fatal("Missinng access token for offline access")
 		}
 	})
+}
+
+func contains(groups []string, item string) bool {
+	for _, group := range groups {
+		if group == item {
+			return true
+		}
+	}
+	return false
 }
