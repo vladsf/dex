@@ -112,15 +112,17 @@ func (r responseTest) run(t *testing.T) {
 
 	cfConn, ok := conn.(*cfConnector)
 	if !ok {
-		t.Fatal(errors.New("it is not cf conn "))
+		t.Fatal(errors.New("it is not a cf conn"))
 	}
 
 	if cfConn.clientID != "test-client" {
 		t.Fatal(errors.New("client ID  is not matching"))
 	}
+
 	if cfConn.clientSecret != "secret" {
 		t.Fatal(errors.New("client secret is not matching"))
 	}
+
 	if cfConn.redirectURI != callBackURL {
 		t.Fatal(errors.New(fmt.Sprintf("client redirect URI is not matching got %s expected %s", cfConn.redirectURI, callBackURL)))
 	}
@@ -132,7 +134,8 @@ func TestGoodResponse(t *testing.T) {
 	defer testServer.Close()
 
 	test := responseTest{
-		serverURL: testServer.URL}
+		serverURL: testServer.URL,
+	}
 
 	test.run(t)
 }
