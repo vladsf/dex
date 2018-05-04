@@ -374,6 +374,7 @@ func TestOAuth2CodeFlow(t *testing.T) {
 				}
 
 				ident := connector.Identity{
+					Name:          "name",
 					UserID:        "fooid",
 					Username:      "foo",
 					Email:         "foo@bar.com",
@@ -383,12 +384,12 @@ func TestOAuth2CodeFlow(t *testing.T) {
 				conn.Identity = ident
 
 				type claims struct {
-					Username      string   `json:"name"`
+					Name          string   `json:"name"`
 					Email         string   `json:"email"`
 					EmailVerified bool     `json:"email_verified"`
 					Groups        []string `json:"groups"`
 				}
-				want := claims{ident.Username, ident.Email, ident.EmailVerified, ident.Groups}
+				want := claims{ident.Name, ident.Email, ident.EmailVerified, ident.Groups}
 
 				newToken, err := config.TokenSource(ctx, token).Token()
 				if err != nil {

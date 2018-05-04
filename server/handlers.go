@@ -427,8 +427,8 @@ func (s *Server) finalizeLogin(identity connector.Identity, authReq storage.Auth
 		email = email + " (unverified)"
 	}
 
-	s.logger.Infof("login successful: connector %q, username=%q, email=%q, groups=%q",
-		authReq.ConnectorID, claims.Username, email, claims.Groups)
+	s.logger.Infof("login successful: connector %q, name=%q, email=%q, groups=%q",
+		authReq.ConnectorID, claims.Name, email, claims.Groups)
 
 	return path.Join(s.issuerURL.Path, "/approval") + "?req=" + authReq.ID, nil
 }
@@ -882,6 +882,7 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
 	}
 	ident := connector.Identity{
 		UserID:        refresh.Claims.UserID,
+		Name:          refresh.Claims.Name,
 		Username:      refresh.Claims.Username,
 		Email:         refresh.Claims.Email,
 		EmailVerified: refresh.Claims.EmailVerified,

@@ -25,7 +25,7 @@ type cfConnector struct {
 	apiURL           string
 	tokenURL         string
 	authorizationURL string
-	userinfoURL      string
+	userInfoURL      string
 	httpClient       *http.Client
 	logger           logrus.FieldLogger
 }
@@ -123,7 +123,7 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 
 	cfConn.tokenURL, _ = uaaResult["token_endpoint"].(string)
 	cfConn.authorizationURL, _ = uaaResult["authorization_endpoint"].(string)
-	cfConn.userinfoURL, _ = uaaResult["userinfo_endpoint"].(string)
+	cfConn.userInfoURL, _ = uaaResult["userinfo_endpoint"].(string)
 
 	return cfConn, err
 }
@@ -198,7 +198,7 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
 
-	userInfoResp, err := client.Get(c.userinfoURL)
+	userInfoResp, err := client.Get(c.userInfoURL)
 	if err != nil {
 		return identity, fmt.Errorf("CF Connector: failed to execute request to userinfo: %v", err)
 	}
