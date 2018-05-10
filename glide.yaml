@@ -140,8 +140,6 @@ import:
   version: 411e09b969b1170a9f0c467558eb4c4c110d9c77
 
 # Structured logging
-- package: github.com/sirupsen/logrus
-  version: v1.0.2
 - package: golang.org/x/sys
   version: 833a04a10549a95dc34458c195cbad61bbb6cb4d
   subpackages:

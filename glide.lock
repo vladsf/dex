@@ -99,8 +99,6 @@ imports:
   subpackages:
   - etreeutils
   - types
-- name: github.com/sirupsen/logrus
-  version: a3f95b5c423586578a4e099b11a46c2479628cac
 - name: github.com/spf13/cobra
   version: bc81c21bd0d8be5ba2d6630a505d79d4467566e7
 - name: github.com/spf13/pflag
