@@ -129,7 +129,12 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 }
 
 func newHTTPClient(rootCAs []string, insecureSkipVerify bool) (*http.Client, error) {
-	tlsConfig := tls.Config{RootCAs: x509.NewCertPool(), InsecureSkipVerify: insecureSkipVerify}
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := tls.Config{RootCAs: pool, InsecureSkipVerify: insecureSkipVerify}
 	for _, rootCA := range rootCAs {
 		rootCABytes, err := ioutil.ReadFile(rootCA)
 		if err != nil {
