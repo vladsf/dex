@@ -130,6 +130,8 @@ func (c *gitlabConnector) HandleCallback(s connector.Scopes, r *http.Request) (i
 		ctx = context.WithValue(r.Context(), oauth2.HTTPClient, c.httpClient)
 	}
 
+	oauth2.RegisterBrokenAuthHeaderProvider(c.baseURL)
+
 	token, err := oauth2Config.Exchange(ctx, q.Get("code"))
 	if err != nil {
 		return identity, fmt.Errorf("gitlab: failed to get token: %v", err)
