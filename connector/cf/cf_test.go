@@ -45,17 +45,18 @@ func TestHandleCallback(t *testing.T) {
 	req, err := http.NewRequest("GET", testServer.URL, nil)
 	expectEqual(t, err, nil)
 
-	t.Run("CallbackWithScopes", func(t *testing.T) {
+	t.Run("CallbackWithGroupsScope", func(t *testing.T) {
 		identity, err := cfConn.HandleCallback(connector.Scopes{Groups: true}, req)
 		expectEqual(t, err, nil)
 
 		sort.Strings(identity.Groups)
-		expectEqual(t, len(identity.Groups), 2)
+		expectEqual(t, len(identity.Groups), 3)
 		expectEqual(t, identity.Groups[0], "some-org-name-1:some-space-name")
 		expectEqual(t, identity.Groups[1], "some-org-name-2")
+		expectEqual(t, identity.Groups[2], "some-space-guid")
 	})
 
-	t.Run("CallbackWithoutScopes", func(t *testing.T) {
+	t.Run("CallbackWithoutGroupsScope", func(t *testing.T) {
 		identity, err := cfConn.HandleCallback(connector.Scopes{}, req)
 
 		expectEqual(t, err, nil)
@@ -63,7 +64,7 @@ func TestHandleCallback(t *testing.T) {
 		expectEqual(t, identity.Username, "test-user")
 	})
 
-	t.Run("CallbackWithOfflineAccess", func(t *testing.T) {
+	t.Run("CallbackWithOfflineAccessScope", func(t *testing.T) {
 		identity, err := cfConn.HandleCallback(connector.Scopes{OfflineAccess: true}, req)
 
 		expectEqual(t, err, nil)

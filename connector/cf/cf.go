@@ -268,12 +268,14 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 			return identity, fmt.Errorf("CF Connector: failed to parse spaces: %v", err)
 		}
 
+		var groupsClaims []string
+
 		for _, resource := range spaces.Resources {
 			orgName := orgMap[resource.Entity.OrganizationGuid]
 			orgSpaces[orgName] = append(orgSpaces[orgName], resource.Entity.Name)
-		}
 
-		var groupsClaims []string
+			groupsClaims = append(groupsClaims, resource.Metadata.Guid)
+		}
 
 		for orgName, spaceNames := range orgSpaces {
 			if len(spaceNames) > 0 {
