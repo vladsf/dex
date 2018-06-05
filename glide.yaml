@@ -39,7 +39,6 @@ import:
   - http2/hpack
   - internal/timeseries
   - lex/httplex
-  - trace
 - package: golang.org/x/text
   version: f4b4367115ec2de254587813edaa901bc1c723a8
 
