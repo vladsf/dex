@@ -564,6 +564,7 @@ func (c *githubConnector) userInOrg(ctx context.Context, client *http.Client, us
 // https://developer.github.com/v3/orgs/teams/#response-12
 type team struct {
 	Name string `json:"name"`
+	Slug string `json:"slug"`
 	Org  org    `json:"organization"`
 }
 
@@ -664,6 +665,7 @@ func (c *githubConnector) userOrgTeams(ctx context.Context, client *http.Client)
 
 		for _, team := range teams {
 			groups[team.Org.Login] = append(groups[team.Org.Login], team.Name)
+			groups[team.Org.Login] = append(groups[team.Org.Login], team.Slug)
 		}
 
 		if apiURL == "" {
