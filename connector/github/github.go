@@ -680,6 +680,7 @@ func (c *githubConnector) userOrgTeams(ctx context.Context, client *http.Client)
 
 		for _, team := range teams {
 			groups[team.Org.Login] = append(groups[team.Org.Login], team.Name)
+			groups[team.Org.Login] = append(groups[team.Org.Login], team.Slug)
 		}
 
 		if apiURL == "" {
