@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -e -u
+
+function abort() {
+  echo $'\e[31m'"$@"$'\e[0m' >&2
+  exit 1
+}
+
+ran_progress="false"
+
+function progress() {
+  if [ "$ran_progress" = "true" ]; then
+    echo ""
+  fi
+
+  ran_progress="true"
+
+  echo $'\e[1m'"$@"$'\e[0m'
+}
+
+merged_branch=merged
+
+if ! git remote | grep upstream >/dev/null; then
+  git remote add upstream https://github.com/coreos/dex
+fi
+
+progress "fetching upstream master"
+git fetch upstream master
+
+progress "merging all PRs on fresh upstream"
+git checkout $merged_branch
+git reset --hard upstream/master
+git branch | grep pr/ | xargs git merge
+
+progress "rewriting all imports"
+ag -l github.com/coreos/dex | xargs sed -i -e 's|github.com/coreos/dex|github.com/concourse/dex|g'
+git commit -a -m "rewrite imports to concourse fork"
+
+progress "switching from glide to go modules"
+go mod init
+git rm glide*
+git rm -r vendor
+git add go.mod
+go test ./...
+git add go.sum
+git commit -a -m "switch to go modules"
+
+progress "done!"
