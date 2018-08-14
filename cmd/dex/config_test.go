@@ -3,10 +3,10 @@ package main
 import (
 	"testing"
 
-	"github.com/coreos/dex/connector/mock"
-	"github.com/coreos/dex/connector/oidc"
-	"github.com/coreos/dex/storage"
-	"github.com/coreos/dex/storage/sql"
+	"github.com/concourse/dex/connector/mock"
+	"github.com/concourse/dex/connector/oidc"
+	"github.com/concourse/dex/storage"
+	"github.com/concourse/dex/storage/sql"
 	"github.com/ghodss/yaml"
 	"github.com/kylelemons/godebug/pretty"
 )
