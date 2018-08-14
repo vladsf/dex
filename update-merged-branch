@@ -49,4 +49,9 @@ go test ./...
 git add go.sum
 git commit -a -m "switch to go modules"
 
+progress "tagging so that the ref is preserved after the next force-push"
+tag_name=merged-$(date "+%Y%m%d%H%M%S")
+git tag $tag_name
+git push origin $tag_name
+
 progress "done!"
