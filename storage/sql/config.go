@@ -84,6 +84,7 @@ type Postgres struct {
 	SSL PostgresSSL `json:"ssl" yaml:"ssl"`
 
 	ConnectionTimeout int // Seconds
+	SearchPath        string
 }
 
 // Open creates a new storage implementation backed by Postgres.
@@ -103,6 +104,7 @@ func (p *Postgres) open(logger logrus.FieldLogger) (*conn, error) {
 		}
 	}
 	set("connect_timeout", strconv.Itoa(p.ConnectionTimeout))
+	set("search_path", p.SearchPath)
 	set("sslkey", p.SSL.KeyFile)
 	set("sslcert", p.SSL.CertFile)
 	set("sslrootcert", p.SSL.CAFile)

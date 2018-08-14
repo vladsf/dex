@@ -90,6 +90,7 @@ func TestPostgres(t *testing.T) {
 			Mode: sslDisable, // Postgres container doesn't support SSL.
 		},
 		ConnectionTimeout: 5,
+		SearchPath:        "",
 	}
 
 	// t.Fatal has a bad habbit of not actually printing the error
