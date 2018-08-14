@@ -25,13 +25,16 @@ if ! git remote | grep upstream >/dev/null; then
   git remote add upstream https://github.com/coreos/dex
 fi
 
+progress "fetching origin to sync pr branches"
+git fetch origin
+
 progress "fetching upstream master"
 git fetch upstream master
 
 progress "merging all PRs on fresh upstream"
 git checkout $merged_branch
 git reset --hard upstream/master
-git branch | grep pr/ | xargs git merge
+git branch -a | grep remotes/origin/pr | sed -e 's|\s*remotes/||' | xargs git merge
 
 progress "rewriting all imports"
 ag -l github.com/coreos/dex | xargs sed -i -e 's|github.com/coreos/dex|github.com/concourse/dex|g'
