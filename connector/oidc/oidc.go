@@ -3,17 +3,21 @@ package oidc
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coreos/go-oidc"
-	"golang.org/x/oauth2"
-
 	"github.com/dexidp/dex/connector"
 	"github.com/dexidp/dex/pkg/log"
+	"golang.org/x/oauth2"
 )
 
 // Config holds configuration options for OpenID Connect logins.
@@ -41,6 +45,9 @@ type Config struct {
 
 	// Configurable key which contains the groups claims
 	GroupsKey string `json:"groupsKey"` // defaults to "groups"
+
+	RootCAs            []string `json:"rootCAs"`
+	InsecureSkipVerify bool     `json:"insecureSkipVerify"`
 }
 
 // Domains that don't support basic auth. golang.org/x/oauth2 has an internal
@@ -81,7 +88,13 @@ func registerBrokenAuthHeaderProvider(url string) {
 // Open returns a connector which can be used to login users through an upstream
 // OpenID Connect provider.
 func (c *Config) Open(id string, logger log.Logger) (conn connector.Connector, err error) {
+	httpClient, err := newHTTPClient(c.RootCAs, c.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 
 	provider, err := oidc.NewProvider(ctx, c.Issuer)
 	if err != nil {
@@ -120,9 +133,44 @@ func (c *Config) Open(id string, logger log.Logger) (conn connector.Connector, e
 		),
 		logger:                    logger,
 		cancel:                    cancel,
+		httpClient:                httpClient,
 		hostedDomains:             c.HostedDomains,
 		insecureSkipEmailVerified: c.InsecureSkipEmailVerified,
 		groupsKey:                 c.GroupsKey,
+	}, nil
+}
+
+func newHTTPClient(rootCAs []string, insecureSkipVerify bool) (*http.Client, error) {
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := tls.Config{RootCAs: pool, InsecureSkipVerify: insecureSkipVerify}
+	for _, rootCA := range rootCAs {
+		rootCABytes, err := ioutil.ReadFile(rootCA)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read root-ca: %v", err)
+		}
+		if !tlsConfig.RootCAs.AppendCertsFromPEM(rootCABytes) {
+			return nil, fmt.Errorf("no certs found in root CA file %q", rootCA)
+		}
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tlsConfig,
+			Proxy:           http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}, nil
 }
 
@@ -138,6 +186,7 @@ type oidcConnector struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
 	logger                    log.Logger
+	httpClient                *http.Client
 	hostedDomains             []string
 	insecureSkipEmailVerified bool
 	groupsKey                 string
@@ -181,17 +230,19 @@ func (c *oidcConnector) HandleCallback(s connector.Scopes, r *http.Request) (ide
 		return identity, &oauth2Error{errType, q.Get("error_description")}
 	}
 
-	token, err := c.oauth2Config.Exchange(r.Context(), q.Get("code"))
+	ctx := context.WithValue(r.Context(), oauth2.HTTPClient, c.httpClient)
+
+	token, err := c.oauth2Config.Exchange(ctx, q.Get("code"))
 	if err != nil {
 		return identity, fmt.Errorf("oidc: failed to get token: %v", err)
 	}
 
-	rawIdToken, ok := token.Extra("id_token").(string)
+	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
 		return identity, fmt.Errorf("oidc: no Id token present")
 	}
 
-	idToken, err := c.verifier.Verify(r.Context(), rawIdToken)
+	idToken, err := c.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		return identity, fmt.Errorf("oidc: failed to verify ID Token: %v", err)
 	}
