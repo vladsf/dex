@@ -37,7 +37,7 @@ git reset --hard upstream/master
 git branch -a | grep remotes/origin/pr | sed -e 's|\s*remotes/||' | xargs git merge
 
 progress "rewriting all imports"
-ag -l github.com/coreos/dex | xargs sed -i -e 's|github.com/coreos/dex|github.com/concourse/dex|g'
+ag --go -l github.com/coreos/dex | xargs sed -i -e 's|github.com/coreos/dex|github.com/concourse/dex|g'
 git commit -a -m "rewrite imports to concourse fork"
 
 progress "switching from glide to go modules"
