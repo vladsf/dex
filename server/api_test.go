@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/dex/api"
-	"github.com/coreos/dex/server/internal"
-	"github.com/coreos/dex/storage"
-	"github.com/coreos/dex/storage/memory"
+	"github.com/concourse/dex/api"
+	"github.com/concourse/dex/server/internal"
+	"github.com/concourse/dex/storage"
+	"github.com/concourse/dex/storage/memory"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -276,7 +276,7 @@ func TestRefreshToken(t *testing.T) {
 
 	// Try to delete again.
 	//
-	// See https://github.com/coreos/dex/issues/1055
+	// See https://github.com/concourse/dex/issues/1055
 	resp, err = client.RevokeRefresh(ctx, &revokeReq)
 	if err != nil {
 		t.Fatalf("Unable to revoke refresh tokens for user: %v", err)

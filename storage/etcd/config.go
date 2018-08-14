@@ -3,7 +3,7 @@ package etcd
 import (
 	"time"
 
-	"github.com/coreos/dex/storage"
+	"github.com/concourse/dex/storage"
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/namespace"
 	"github.com/coreos/etcd/pkg/transport"

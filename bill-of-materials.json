@@ -27,7 +27,7 @@
 		]
 	},
 	{
-		"project": "github.com/coreos/dex",
+		"project": "github.com/concourse/dex",
 		"licenses": [
 			{
 				"type": "Apache License 2.0",

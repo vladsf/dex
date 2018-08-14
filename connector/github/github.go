@@ -19,7 +19,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 
-	"github.com/coreos/dex/connector"
+	"github.com/concourse/dex/connector"
 	"github.com/sirupsen/logrus"
 )
 

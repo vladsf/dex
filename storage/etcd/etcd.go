@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/dex/storage"
+	"github.com/concourse/dex/storage"
 	"github.com/coreos/etcd/clientv3"
 	"github.com/sirupsen/logrus"
 )

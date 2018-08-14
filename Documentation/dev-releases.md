@@ -11,7 +11,7 @@ This requires the following tools.
 
 And the following permissions.
 
-* Push access to the github.com/coreos/dex git repo.
+* Push access to the github.com/concourse/dex git repo.
 * Push access to the quay.io/coreos/dex Docker repo.
 
 ## Tagging the release
@@ -43,7 +43,7 @@ git push git@github.com:coreos/dex.git v2.0.0
 Draft releases on GitHub and summarize the changes since the last release. See
 previous releases for the expected format.
 
-https://github.com/coreos/dex/releases
+https://github.com/concourse/dex/releases
 
 ## Minor releases - create a branch
 

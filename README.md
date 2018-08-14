@@ -1,8 +1,8 @@
 # dex - A federated OpenID Connect provider
 
 [![Travis](https://api.travis-ci.org/coreos/dex.svg)](https://travis-ci.org/coreos/dex)
-[![GoDoc](https://godoc.org/github.com/coreos/dex?status.svg)](https://godoc.org/github.com/coreos/dex)
-[![Go Report Card](https://goreportcard.com/badge/github.com/coreos/dex)](https://goreportcard.com/report/github.com/coreos/dex)
+[![GoDoc](https://godoc.org/github.com/concourse/dex?status.svg)](https://godoc.org/github.com/concourse/dex)
+[![Go Report Card](https://goreportcard.com/badge/github.com/concourse/dex)](https://goreportcard.com/report/github.com/concourse/dex)
 
 ![logo](Documentation/logos/dex-horizontal-color.png)
 
@@ -114,8 +114,8 @@ Due to their public nature, GitHub and mailing lists are NOT appropriate places 
 [tectonic]: https://tectonic.com/
 [tectonic-console]: https://tectonic.com/enterprise/docs/latest/usage/index.html#tectonic-console
 [go-oidc]: https://github.com/coreos/go-oidc
-[issue-1065]: https://github.com/coreos/dex/issues/1065
-[release-notes]: https://github.com/coreos/dex/releases
-[issues]: https://github.com/coreos/dex/issues
+[issue-1065]: https://github.com/concourse/dex/issues/1065
+[release-notes]: https://github.com/concourse/dex/releases
+[issues]: https://github.com/concourse/dex/issues
 [dex-dev]: https://groups.google.com/forum/#!forum/dex-dev
 [disclosure]: https://coreos.com/security/disclosure/
