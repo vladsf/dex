@@ -27,6 +27,7 @@ fi
 
 progress "fetching origin to sync pr branches"
 git fetch origin
+git remote update origin --prune
 
 progress "fetching upstream master"
 git fetch upstream master
