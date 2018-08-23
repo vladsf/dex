@@ -19,7 +19,7 @@ function progress() {
   echo $'\e[1m'"$@"$'\e[0m'
 }
 
-merged_branch=merged
+merged_branch=master
 
 if ! git remote | grep upstream >/dev/null; then
   git remote add upstream https://github.com/coreos/dex
