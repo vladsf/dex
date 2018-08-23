@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/dex/connector"
+	"github.com/concourse/dex/connector"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/square/go-jose.v2"
 )

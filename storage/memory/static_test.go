@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/coreos/dex/storage"
+	"github.com/concourse/dex/storage"
 	"github.com/sirupsen/logrus"
 )
 
