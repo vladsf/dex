@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/dex/storage"
-	"github.com/coreos/dex/storage/conformance"
+	"github.com/concourse/dex/storage"
+	"github.com/concourse/dex/storage/conformance"
 	"github.com/sirupsen/logrus"
 )
 

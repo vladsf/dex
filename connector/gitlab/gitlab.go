@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/coreos/dex/connector"
+	"github.com/concourse/dex/connector"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
