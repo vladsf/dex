@@ -106,6 +106,9 @@ type WebConfig struct {
 
 	// Defaults to "coreos"
 	Theme string
+
+	// Defaults to issuer URL
+	HostURL string
 }
 
 func value(val, defaultValue time.Duration) time.Duration {
