@@ -22,7 +22,7 @@ function progress() {
 merged_branch=master
 
 if ! git remote | grep upstream >/dev/null; then
-  git remote add upstream https://github.com/coreos/dex
+  git remote add upstream https://github.com/dexidp/dex
 fi
 
 progress "fetching origin to sync pr branches"
@@ -38,7 +38,7 @@ git reset --hard upstream/master
 git branch -a | grep remotes/origin/pr | sed -e 's|\s*remotes/||' | xargs git merge
 
 progress "rewriting all imports"
-ag --go -l github.com/coreos/dex | xargs sed -i -e 's|"github.com/coreos/dex|"github.com/concourse/dex|g'
+ag --go -l github.com/dexidp/dex | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
 git commit -a -m "rewrite imports to concourse fork"
 
 progress "switching from glide to go modules"
