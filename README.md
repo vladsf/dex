@@ -69,7 +69,7 @@ Dex implements the following connectors:
 | [GitHub](Documentation/connectors/github.md) | yes | yes | stable | |
 | [SAML 2.0](Documentation/connectors/saml.md) | no | yes | stable |
 | [GitLab](Documentation/connectors/gitlab.md) | yes | yes | beta | |
-| [OpenID Connect](Documentation/connectors/oidc.md) | yes | no ([#1065][issue-1065]) | beta | Includes Google, Salesforce, Azure, etc. |
+| [OpenID Connect](Documentation/connectors/oidc.md) | yes | yes | beta | Includes Google, Salesforce, Azure, etc. |
 | [LinkedIn](Documentation/connectors/linkedin.md) | yes | no | beta | |
 | [Microsoft](Documentation/connectors/microsoft.md) | yes | yes | beta | |
 | [AuthProxy](Documentation/connectors/authproxy.md) | no | no | alpha | Authentication proxies such as Apache2 mod_auth, etc. |
