@@ -40,13 +40,14 @@ var reLast = regexp.MustCompile("<([^>]+)>; rel=\"last\"")
 
 // Config holds configuration options for github logins.
 type Config struct {
-	ClientID     string `json:"clientID"`
-	ClientSecret string `json:"clientSecret"`
-	RedirectURI  string `json:"redirectURI"`
-	Org          string `json:"org"`
-	Orgs         []Org  `json:"orgs"`
-	HostName     string `json:"hostName"`
-	RootCA       string `json:"rootCA"`
+	ClientID      string `json:"clientID"`
+	ClientSecret  string `json:"clientSecret"`
+	RedirectURI   string `json:"redirectURI"`
+	Org           string `json:"org"`
+	Orgs          []Org  `json:"orgs"`
+	HostName      string `json:"hostName"`
+	RootCA        string `json:"rootCA"`
+	TeamNameField string `json:"teamNameField"`
 }
 
 // Org holds org-team filters, in which teams are optional.
@@ -107,6 +108,13 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 
 	}
 
+	switch c.TeamNameField {
+	case "name", "slug", "both", "":
+		g.teamNameField = c.TeamNameField
+	default:
+		return nil, fmt.Errorf("invalid connector config: unsupported team name field value `%s`", c.TeamNameField)
+	}
+
 	return &g, nil
 }
 
@@ -134,7 +142,8 @@ type githubConnector struct {
 	// Used to support untrusted/self-signed CA certs.
 	rootCA string
 	// HTTP Client that trusts the custom delcared rootCA cert.
-	httpClient *http.Client
+	httpClient    *http.Client
+	teamNameField string
 }
 
 // groupsRequired returns whether dex requires GitHub's 'read:org' scope. Dex
@@ -317,6 +326,8 @@ func (c *githubConnector) getGroups(ctx context.Context, client *http.Client, gr
 		return c.groupsForOrgs(ctx, client, userLogin)
 	} else if c.org != "" {
 		return c.teamsForOrg(ctx, client, c.org)
+	} else if groupScope {
+		return c.userGroups(ctx, client)
 	}
 	return nil, nil
 }
@@ -564,9 +575,12 @@ func (c *githubConnector) userInOrg(ctx context.Context, client *http.Client, us
 // https://developer.github.com/v3/orgs/teams/#response-12
 type team struct {
 	Name string `json:"name"`
-	Org  struct {
-		Login string `json:"login"`
-	} `json:"organization"`
+	Slug string `json:"slug"`
+	Org  org    `json:"organization"`
+}
+
+type org struct {
+	Login string `json:"login"`
 }
 
 // teamsForOrg queries the GitHub API for team membership within a specific organization.
@@ -587,7 +601,96 @@ func (c *githubConnector) teamsForOrg(ctx context.Context, client *http.Client, 
 
 		for _, team := range teams {
 			if team.Org.Login == orgName {
-				groups = append(groups, team.Name)
+				switch c.teamNameField {
+				case "name", "":
+					groups = append(groups, team.Name)
+				case "slug":
+					groups = append(groups, team.Slug)
+				case "both":
+					groups = append(groups, team.Name)
+					groups = append(groups, team.Slug)
+				}
+			}
+		}
+
+		if apiURL == "" {
+			break
+		}
+	}
+
+	return groups, nil
+}
+
+func (c *githubConnector) userGroups(ctx context.Context, client *http.Client) (groups []string, err error) {
+
+	orgs, err := c.userOrgs(ctx, client)
+	if err != nil {
+		return groups, err
+	}
+
+	orgTeams, err := c.userOrgTeams(ctx, client)
+	if err != nil {
+		return groups, err
+	}
+
+	for _, org := range orgs {
+		if teams, ok := orgTeams[org]; !ok {
+			groups = append(groups, org)
+		} else {
+			for _, team := range teams {
+				groups = append(groups, org+":"+team)
+			}
+		}
+	}
+
+	return groups, err
+}
+
+func (c *githubConnector) userOrgs(ctx context.Context, client *http.Client) ([]string, error) {
+	apiURL, groups := c.apiURL+"/user/orgs", []string{}
+	for {
+		// https://developer.github.com/v3/orgs/#list-your-organizations
+		var (
+			orgs []org
+			err  error
+		)
+		if apiURL, err = get(ctx, client, apiURL, &orgs); err != nil {
+			return nil, fmt.Errorf("github: get orgs: %v", err)
+		}
+
+		for _, org := range orgs {
+			groups = append(groups, org.Login)
+		}
+
+		if apiURL == "" {
+			break
+		}
+	}
+
+	return groups, nil
+}
+
+func (c *githubConnector) userOrgTeams(ctx context.Context, client *http.Client) (map[string][]string, error) {
+	apiURL, groups := c.apiURL+"/user/teams", map[string][]string{}
+	for {
+		// https://developer.github.com/v3/orgs/teams/#list-user-teams
+		var (
+			teams []team
+			err   error
+		)
+		if apiURL, err = get(ctx, client, apiURL, &teams); err != nil {
+			return nil, fmt.Errorf("github: get teams: %v", err)
+		}
+
+		for _, team := range teams {
+			switch c.teamNameField {
+			case "name", "":
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Name)
+			case "slug":
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Slug)
+			case "both":
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Name)
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Slug)
 			}
 		}
 
