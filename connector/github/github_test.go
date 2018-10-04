@@ -22,10 +22,10 @@ func TestUserGroups(t *testing.T) {
 	}
 
 	teams := []team{
-		{Name: "team-1", Org: org{Login: "org-1"}},
-		{Name: "team-2", Org: org{Login: "org-1"}},
-		{Name: "team-3", Org: org{Login: "org-1"}},
-		{Name: "team-4", Org: org{Login: "org-2"}},
+		{Name: "team 1", Slug: "team-1", Org: org{Login: "org-1"}},
+		{Name: "team 2", Slug: "team-2", Org: org{Login: "org-1"}},
+		{Name: "team 3", Slug: "team-3", Org: org{Login: "org-1"}},
+		{Name: "team 4", Slug: "team-4", Org: org{Login: "org-2"}},
 	}
 
 	s := newTestServer(map[string]interface{}{
@@ -33,14 +33,18 @@ func TestUserGroups(t *testing.T) {
 		"/user/teams": teams,
 	})
 
-	connector := githubConnector{apiURL: s.URL}
+	connector := githubConnector{apiURL: s.URL, teamNameField: "both"}
 	groups, err := connector.userGroups(context.Background(), newClient())
 
 	expectNil(t, err)
 	expectEquals(t, groups, []string{
+		"org-1:team 1",
 		"org-1:team-1",
+		"org-1:team 2",
 		"org-1:team-2",
+		"org-1:team 3",
 		"org-1:team-3",
+		"org-2:team 4",
 		"org-2:team-4",
 		"org-3",
 	})
@@ -55,7 +59,7 @@ func TestUserGroupsWithoutOrgs(t *testing.T) {
 		"/user/teams": []team{},
 	})
 
-	connector := githubConnector{apiURL: s.URL}
+	connector := githubConnector{apiURL: s.URL, teamNameField: "both"}
 	groups, err := connector.userGroups(context.Background(), newClient())
 
 	expectNil(t, err)
@@ -85,7 +89,7 @@ func TestUsernameIncludedInFederatedIdentity(t *testing.T) {
 	req, err := http.NewRequest("GET", hostURL.String(), nil)
 	expectNil(t, err)
 
-	githubConnector := githubConnector{apiURL: s.URL, hostName: hostURL.Host, httpClient: newClient()}
+	githubConnector := githubConnector{apiURL: s.URL, hostName: hostURL.Host, httpClient: newClient(), teamNameField: "both"}
 	identity, err := githubConnector.HandleCallback(connector.Scopes{}, req)
 
 	expectNil(t, err)
