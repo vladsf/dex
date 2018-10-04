@@ -16,12 +16,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dexidp/dex/connector"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
-
-	"github.com/sirupsen/logrus"
-
-	"github.com/dexidp/dex/connector"
 )
 
 const (
@@ -109,7 +107,7 @@ func (c *Config) Open(id string, logger logrus.FieldLogger) (connector.Connector
 	}
 
 	switch c.TeamNameField {
-	case "name", "slug", "":
+	case "name", "slug", "both", "":
 		g.teamNameField = c.TeamNameField
 	default:
 		return nil, fmt.Errorf("invalid connector config: unsupported team name field value `%s`", c.TeamNameField)
@@ -605,6 +603,9 @@ func (c *githubConnector) teamsForOrg(ctx context.Context, client *http.Client, 
 					groups = append(groups, team.Name)
 				case "slug":
 					groups = append(groups, team.Slug)
+				case "both":
+					groups = append(groups, team.Name)
+					groups = append(groups, team.Slug)
 				}
 			}
 		}
@@ -679,7 +680,15 @@ func (c *githubConnector) userOrgTeams(ctx context.Context, client *http.Client)
 		}
 
 		for _, team := range teams {
-			groups[team.Org.Login] = append(groups[team.Org.Login], team.Name)
+			switch c.teamNameField {
+			case "name", "":
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Name)
+			case "slug":
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Slug)
+			case "both":
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Name)
+				groups[team.Org.Login] = append(groups[team.Org.Login], team.Slug)
+			}
 		}
 
 		if apiURL == "" {
