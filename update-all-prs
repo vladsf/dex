@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e -x
+
+git fetch origin
+
+git branch | tr '*' ' ' | grep pr/ | while read b _; do
+  git reset --hard origin/$b
+done
