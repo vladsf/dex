@@ -5,5 +5,8 @@ set -e -x
 git fetch origin
 
 git branch | tr '*' ' ' | grep pr/ | while read b _; do
+  git checkout $b
   git reset --hard origin/$b
 done
+
+git checkout maintenance
