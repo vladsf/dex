@@ -2,24 +2,7 @@
 
 set -e -u
 
-function abort() {
-  echo $'\e[31m'"$@"$'\e[0m' >&2
-  exit 1
-}
-
-ran_progress="false"
-
-function progress() {
-  if [ "$ran_progress" = "true" ]; then
-    echo ""
-  fi
-
-  ran_progress="true"
-
-  echo $'\e[1m'"$@"$'\e[0m'
-}
-
-merged_branch=master
+source $(dirname $0)/common.sh
 
 if ! git remote | grep upstream >/dev/null; then
   git remote add upstream https://github.com/dexidp/dex
@@ -37,22 +20,4 @@ git checkout $merged_branch
 git reset --hard upstream/master
 git branch -a | grep remotes/origin/pr | sed -e 's|\s*remotes/||' | xargs git merge
 
-progress "rewriting all imports"
-ag --go -l github.com/dexidp/dex | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
-git commit -a -m "rewrite imports to concourse fork"
-
-progress "switching from glide to go modules"
-go mod init
-git rm glide*
-git rm -r vendor
-git add go.mod
-go test ./...
-git add go.sum
-git commit -a -m "switch to go modules"
-
-progress "tagging so that the ref is preserved after the next force-push"
-tag_name=merged-$(date "+%Y%m%d%H%M%S")
-git tag $tag_name
-git push origin $tag_name
-
-progress "done!"
+./post-merge
