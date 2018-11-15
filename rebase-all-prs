@@ -45,6 +45,9 @@ function rebase_target() {
   pr/unset-pg-serializable-transaction-level)
     echo upstream/master
     ;;
+  pr/remove-mysql-cockroachdb-drivers)
+    echo upstream/master
+    ;;
   *)
     ;;
   esac
