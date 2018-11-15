@@ -51,6 +51,9 @@ function rebase_target() {
   pr/fix-conformance-time-comparison)
     echo upstream/master
     ;;
+  pr/retry-on-pg-serialization-error)
+    echo upstream/master
+    ;;
   *)
     ;;
   esac
