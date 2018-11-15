@@ -63,3 +63,5 @@ git branch | tr '*' ' ' | grep pr/ | while read b _; do
 
   rebase_target $b | xargs git rebase
 done
+
+git co maintenance
