@@ -48,6 +48,9 @@ function rebase_target() {
   pr/remove-mysql-cockroachdb-drivers)
     echo upstream/master
     ;;
+  pr/fix-conformance-time-comparison)
+    echo upstream/master
+    ;;
   *)
     ;;
   esac
