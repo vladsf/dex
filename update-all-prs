@@ -4,7 +4,7 @@ set -e -u
 
 git fetch origin
 
-git branch -r | grep pr/ | sed -e 's|\s*origin/||' | while read b _; do
+$(dirname $0)/list-pr-branches | while read b _; do
   git checkout $b
   git reset --hard origin/$b
 done

@@ -59,7 +59,7 @@ function rebase_target() {
   esac
 }
 
-git branch | tr '*' ' ' | grep pr/ | while read b _; do
+$(dirname $0)/list-pr-branches | while read b _; do
   git checkout $b
   target=$(rebase_target $b)
   if [ -z "$target" ]; then
