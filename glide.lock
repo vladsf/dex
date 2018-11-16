@@ -1,5 +1,5 @@
-hash: fe29de07f5c1580c51de0e78796bce522d933602d88a4c397b586bd88ca7ca76
-updated: 2018-10-24T14:58:32.448481302-07:00
+hash: 88d8f3ffded00566b52b744bfc654e455b4b29c2de93a8e6c6519447a9cb864b
+updated: 2018-11-16T19:47:13.695132815Z
 imports:
 - name: github.com/beevik/etree
   version: 4cd0dd976db869f817248477718071a28e978df0
@@ -60,7 +60,7 @@ imports:
   - diff
   - pretty
 - name: github.com/lib/pq
-  version: 50761b0867bd1d9d069276790bcd4a3bccf2324a
+  version: 9eb73efc1fcc404148b56765b0d3f61d9a5ef8ee
   subpackages:
   - oid
 - name: github.com/mattn/go-sqlite3
