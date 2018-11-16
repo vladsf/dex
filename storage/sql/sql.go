@@ -6,12 +6,10 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/cockroachdb/cockroach-go/crdb"
+	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 
 	// import third party drivers
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -21,13 +19,7 @@ import (
 type flavor struct {
 	queryReplacers []replacer
 
-	// Optional function to create and finish a transaction. This is mainly for
-	// cockroachdb support which requires special retry logic provided by their
-	// client package.
-	//
-	// This will be nil for most flavors.
-	//
-	// See: https://github.com/cockroachdb/docs/blob/63761c2e/_includes/app/txn-sample.go#L41-L44
+	// Optional function to create and finish a transaction.
 	executeTx func(db *sql.DB, fn func(*sql.Tx) error) error
 
 	// Does the flavor support timezones?
@@ -59,19 +51,34 @@ var (
 		// NOTE(ericchiang): For some reason using `SET SESSION CHARACTERISTICS AS TRANSACTION` at a
 		// session level didn't work for some edge cases. Might be something worth exploring.
 		executeTx: func(db *sql.DB, fn func(sqlTx *sql.Tx) error) error {
-			tx, err := db.Begin()
-			if err != nil {
-				return err
-			}
-			defer tx.Rollback()
+			for {
+				tx, err := db.Begin()
+				if err != nil {
+					return err
+				}
 
-			if _, err := tx.Exec(`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;`); err != nil {
-				return err
+				defer tx.Rollback()
+
+				if _, err := tx.Exec(`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;`); err != nil {
+					return err
+				}
+
+				if err := fn(tx); err != nil {
+					return err
+				}
+
+				err = tx.Commit()
+				if err != nil {
+					if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "40001" {
+						// serialization error; retry
+						continue
+					}
+
+					return err
+				}
+
+				return nil
 			}
-			if err := fn(tx); err != nil {
-				return err
-			}
-			return tx.Commit()
 		},
 
 		supportsTimezones: true,
@@ -90,18 +97,6 @@ var (
 			// SQLite doesn't have a "now()" method, replace with "date('now')"
 			{regexp.MustCompile(`\bnow\(\)`), "date('now')"},
 		},
-	}
-
-	// Incomplete.
-	flavorMySQL = flavor{
-		queryReplacers: []replacer{
-			{bindRegexp, "?"},
-		},
-	}
-
-	// Not tested.
-	flavorCockroach = flavor{
-		executeTx: crdb.ExecuteTx,
 	}
 )
 
