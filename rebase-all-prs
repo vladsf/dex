@@ -26,7 +26,7 @@ function rebase_target() {
   pr/password-grant)
     echo upstream/master
     ;;
-  pr/github-teams-no-org-and-slugs)
+  pr/github-team-name-and-slug)
     echo upstream/master
     ;;
   pr/gitlab-broken-auth-headers)
