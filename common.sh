@@ -18,3 +18,7 @@ function progress() {
 
   echo $'\e[1m'"$@"$'\e[0m'
 }
+
+if ! git remote | grep upstream >/dev/null; then
+  git remote add upstream https://github.com/dexidp/dex
+fi

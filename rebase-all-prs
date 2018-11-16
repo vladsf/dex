@@ -4,6 +4,8 @@ set -e -x
 
 set -o pipefail
 
+source $(dirname $0)/common.sh
+
 git fetch origin
 git fetch upstream master
 
