@@ -2,16 +2,15 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"regexp"
 	"time"
 
-	"github.com/cockroachdb/cockroach-go/crdb"
+	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 
 	// import third party drivers
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -21,13 +20,7 @@ import (
 type flavor struct {
 	queryReplacers []replacer
 
-	// Optional function to create and finish a transaction. This is mainly for
-	// cockroachdb support which requires special retry logic provided by their
-	// client package.
-	//
-	// This will be nil for most flavors.
-	//
-	// See: https://github.com/cockroachdb/docs/blob/63761c2e/_includes/app/txn-sample.go#L41-L44
+	// Optional function to create and finish a transaction.
 	executeTx func(db *sql.DB, fn func(*sql.Tx) error) error
 
 	// Does the flavor support timezones?
@@ -51,27 +44,49 @@ var (
 	// The "github.com/lib/pq" driver is the default flavor. All others are
 	// translations of this.
 	flavorPostgres = flavor{
-		// The default behavior for Postgres transactions is consistent reads, not consistent writes.
-		// For each transaction opened, ensure it has the correct isolation level.
+		// The default behavior for Postgres transactions is consistent reads, not
+		// consistent writes. For each transaction opened, ensure it has the
+		// correct isolation level.
 		//
 		// See: https://www.postgresql.org/docs/9.3/static/sql-set-transaction.html
 		//
-		// NOTE(ericchiang): For some reason using `SET SESSION CHARACTERISTICS AS TRANSACTION` at a
-		// session level didn't work for some edge cases. Might be something worth exploring.
+		// Be careful not to wrap sql errors in the callback 'fn', otherwise
+		// serialization failures will not be detected and retried.
 		executeTx: func(db *sql.DB, fn func(sqlTx *sql.Tx) error) error {
-			tx, err := db.Begin()
-			if err != nil {
-				return err
-			}
-			defer tx.Rollback()
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
 
-			if _, err := tx.Exec(`SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;`); err != nil {
-				return err
+			opts := &sql.TxOptions{
+				Isolation: sql.LevelSerializable,
 			}
-			if err := fn(tx); err != nil {
-				return err
+
+			for {
+				tx, err := db.BeginTx(ctx, opts)
+				if err != nil {
+					return err
+				}
+
+				if err := fn(tx); err != nil {
+					if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "serialization_failure" {
+						// serialization error; retry
+						continue
+					}
+
+					return err
+				}
+
+				err = tx.Commit()
+				if err != nil {
+					if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "serialization_failure" {
+						// serialization error; retry
+						continue
+					}
+
+					return err
+				}
+
+				return nil
 			}
-			return tx.Commit()
 		},
 
 		supportsTimezones: true,
@@ -90,18 +105,6 @@ var (
 			// SQLite doesn't have a "now()" method, replace with "date('now')"
 			{regexp.MustCompile(`\bnow\(\)`), "date('now')"},
 		},
-	}
-
-	// Incomplete.
-	flavorMySQL = flavor{
-		queryReplacers: []replacer{
-			{bindRegexp, "?"},
-		},
-	}
-
-	// Not tested.
-	flavorCockroach = flavor{
-		executeTx: crdb.ExecuteTx,
 	}
 )
 
