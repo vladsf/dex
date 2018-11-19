@@ -11,6 +11,7 @@ ag --go -l github.com/dexidp/dex | xargs sed -i -e 's|"github.com/dexidp/dex|"gi
 git commit -a -m "rewrite imports to concourse fork"
 
 progress "switching from glide to go modules"
+export GO111MODULE=on
 go mod init
 git rm glide*
 git rm -r vendor
