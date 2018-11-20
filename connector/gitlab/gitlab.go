@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
-	"github.com/dexidp/dex/connector"
+	"github.com/concourse/dex/connector"
 )
 
 const (
