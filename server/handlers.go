@@ -1037,37 +1037,9 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
 	}
 	q := r.Form
 
-	// Get the clientID and secret from basic auth or form variables
-	clientID, clientSecret, ok := r.BasicAuth()
-	if ok {
-		var err error
-		if clientID, err = url.QueryUnescape(clientID); err != nil {
-			s.tokenErrHelper(w, errInvalidRequest, "client_id improperly encoded", http.StatusBadRequest)
-			return
-		}
-		if clientSecret, err = url.QueryUnescape(clientSecret); err != nil {
-			s.tokenErrHelper(w, errInvalidRequest, "client_secret improperly encoded", http.StatusBadRequest)
-			return
-		}
-	} else {
-		clientID = q.Get("client_id")
-		clientSecret = q.Get("client_secret")
-	}
-
 	nonce := q.Get("nonce")
 	// Some clients, like the old go-oidc, provide extra whitespace. Tolerate this.
 	scopes := strings.Fields(q.Get("scope"))
-
-	// Get the client from the database
-	client, err := s.storage.GetClient(clientID)
-	if err != nil {
-		if err == storage.ErrNotFound {
-			s.tokenErrHelper(w, errInvalidClient, fmt.Sprintf("Invalid client_id (%q).", clientID), http.StatusBadRequest)
-			return
-		}
-		s.tokenErrHelper(w, errInvalidClient, fmt.Sprintf("Failed to get client %v.", err), http.StatusBadRequest)
-		return
-	}
 
 	// Parse the scopes if they are passed
 	var (
@@ -1087,7 +1059,7 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
 				continue
 			}
 
-			isTrusted, err := s.validateCrossClientTrust(clientID, peerID)
+			isTrusted, err := s.validateCrossClientTrust(client.ID, peerID)
 			if err != nil {
 				s.tokenErrHelper(w, errInvalidClient, fmt.Sprintf("Error validating cross client trust %v.", err), http.StatusBadRequest)
 				return
@@ -1175,7 +1147,7 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
 		refresh := storage.RefreshToken{
 			ID:          storage.NewID(),
 			Token:       storage.NewID(),
-			ClientID:    clientID,
+			ClientID:    client.ID,
 			ConnectorID: connID,
 			Scopes:      scopes,
 			Claims:      claims,
