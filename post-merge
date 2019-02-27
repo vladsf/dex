@@ -8,6 +8,10 @@ git checkout $merged_branch
 
 progress "rewriting all imports"
 ag --go -l github.com/dexidp/dex | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
+
+progress "rewriting module name"
+sed -i -e 's|module github.com/dexidp/dex|module github.com/concourse/dex|g' go.mod
+
 git commit -a -m "rewrite imports to concourse fork"
 
 progress "tagging so that the ref is preserved after the next force-push"
