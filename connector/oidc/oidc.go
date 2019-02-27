@@ -43,6 +43,9 @@ type Config struct {
 	// Configurable key which contains the groups claims
 	GroupsKey string `json:"groupsKey"` // defaults to "groups"
 
+	// Configurable key which contains the user name claims
+	UserNameKey string `json:"userNameKey"` // defaults to "username"
+
 	RootCAs            []string `json:"rootCAs"`
 	InsecureSkipVerify bool     `json:"insecureSkipVerify"`
 }
@@ -133,6 +136,7 @@ func (c *Config) Open(id string, logger log.Logger) (conn connector.Connector, e
 		httpClient:    httpClient,
 		hostedDomains: c.HostedDomains,
 		groupsKey:     c.GroupsKey,
+		userNameKey:   c.UserNameKey,
 	}, nil
 }
 
@@ -184,6 +188,7 @@ type oidcConnector struct {
 	httpClient    *http.Client
 	hostedDomains []string
 	groupsKey     string
+	userNameKey   string
 }
 
 func (c *oidcConnector) Close() error {
@@ -247,11 +252,19 @@ func (c *oidcConnector) HandleCallback(s connector.Scopes, r *http.Request) (ide
 		return identity, fmt.Errorf("oidc: failed to decode claims: %v", err)
 	}
 
-	hostedDomain, _ := claimsMaps["hd"].(string)
+	if c.groupsKey == "" {
+		c.groupsKey = "groups"
+	}
+
+	if c.userNameKey == "" {
+		c.userNameKey = "username"
+	}
+
+	userName, _ := claimsMaps[c.userNameKey].(string)
 	name, _ := claimsMaps["name"].(string)
-	userName, _ := claimsMaps["username"].(string)
 	email, _ := claimsMaps["email"].(string)
 	emailVerified, _ := claimsMaps["email_verified"].(bool)
+	hostedDomain, _ := claimsMaps["hd"].(string)
 
 	if len(c.hostedDomains) > 0 {
 		found := false
@@ -276,10 +289,6 @@ func (c *oidcConnector) HandleCallback(s connector.Scopes, r *http.Request) (ide
 	}
 
 	if s.Groups {
-		if c.groupsKey == "" {
-			c.groupsKey = "groups"
-		}
-
 		groupsClaim, _ := claimsMaps[c.groupsKey].([]interface{})
 
 		for _, group := range groupsClaim {
