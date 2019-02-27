@@ -10,16 +10,6 @@ progress "rewriting all imports"
 ag --go -l github.com/dexidp/dex | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
 git commit -a -m "rewrite imports to concourse fork"
 
-progress "switching from glide to go modules"
-export GO111MODULE=on
-go mod init
-git rm glide*
-git rm -r vendor
-git add go.mod
-go test ./...
-git add go.sum
-git commit -a -m "switch to go modules"
-
 progress "tagging so that the ref is preserved after the next force-push"
 tag_name=merged-$(date "+%Y%m%d%H%M%S")
 git tag $tag_name
