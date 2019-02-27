@@ -121,7 +121,7 @@ func testSetup(t *testing.T) *httptest.Server {
 			"exp":            time.Now().Add(time.Hour).Unix(),
 			"groups_key":     []string{"test-group"},
 			"name":           "test-name",
-			"username":       "test-username",
+			"user_name_key":  "test-username",
 			"email":          "test-email",
 			"email_verified": true,
 		})
@@ -179,6 +179,7 @@ func newConnector(t *testing.T, serverURL string) *oidcConnector {
 		Scopes:       []string{"groups"},
 		RedirectURI:  serverURL + "/callback",
 		GroupsKey:    "groups_key",
+		UserNameKey:  "user_name_key",
 	}
 
 	log := logrus.New()
