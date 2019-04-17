@@ -10,11 +10,11 @@ import (
 	// https://github.com/grpc/grpc-go/issues/711
 	"golang.org/x/net/context"
 
-	"github.com/dexidp/dex/api"
-	"github.com/dexidp/dex/pkg/log"
-	"github.com/dexidp/dex/server/internal"
-	"github.com/dexidp/dex/storage"
-	"github.com/dexidp/dex/version"
+	"github.com/concourse/dex/api"
+	"github.com/concourse/dex/pkg/log"
+	"github.com/concourse/dex/server/internal"
+	"github.com/concourse/dex/storage"
+	"github.com/concourse/dex/version"
 )
 
 // apiVersion increases every time a new call is added to the API. Clients should use this info

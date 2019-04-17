@@ -17,9 +17,9 @@ import (
 	"github.com/gorilla/mux"
 	jose "gopkg.in/square/go-jose.v2"
 
-	"github.com/dexidp/dex/connector"
-	"github.com/dexidp/dex/server/internal"
-	"github.com/dexidp/dex/storage"
+	"github.com/concourse/dex/connector"
+	"github.com/concourse/dex/server/internal"
+	"github.com/concourse/dex/storage"
 )
 
 // newHealthChecker returns the healthz handler. The handler runs until the
