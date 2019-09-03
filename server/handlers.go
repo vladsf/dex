@@ -691,6 +691,8 @@ func (s *Server) handleToken(w http.ResponseWriter, r *http.Request) {
 		s.handleAuthCode(w, r, client)
 	case grantTypeRefreshToken:
 		s.handleRefreshToken(w, r, client)
+	case grantTypeClientCredentials:
+		s.handleClientCredentialsGrant(w, r, client)
 	case grantTypePassword:
 		s.handlePasswordGrant(w, r, client)
 	default:
@@ -1032,6 +1034,29 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
 	s.writeAccessToken(w, idToken, accessToken, rawNewToken, expiry)
 }
 
+func (s *Server) handleClientCredentialsGrant(w http.ResponseWriter, r *http.Request, client storage.Client) {
+
+	if err := r.ParseForm(); err != nil {
+		s.tokenErrHelper(w, errInvalidRequest, "Couldn't parse data", http.StatusBadRequest)
+		return
+	}
+	q := r.Form
+
+	nonce := q.Get("nonce")
+	scopes := strings.Fields(q.Get("scope"))
+
+	claims := storage.Claims{UserID: client.ID}
+
+	accessToken := storage.NewID()
+	idToken, expiry, err := s.newIDToken(client.ID, claims, scopes, nonce, accessToken, "client")
+	if err != nil {
+		s.tokenErrHelper(w, errServerError, fmt.Sprintf("failed to create ID token: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	s.writeAccessToken(w, idToken, accessToken, "", expiry)
+}
+
 func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, client storage.Client) {
 
 	// Parse the fields
@@ -1260,7 +1285,7 @@ func (s *Server) writeAccessToken(w http.ResponseWriter, idToken, accessToken, r
 		RefreshToken string `json:"refresh_token,omitempty"`
 		IDToken      string `json:"id_token"`
 	}{
-		accessToken,
+		idToken,
 		"bearer",
 		int(expiry.Sub(s.now()).Seconds()),
 		refreshToken,
