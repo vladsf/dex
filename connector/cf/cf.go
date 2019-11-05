@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -67,6 +68,7 @@ type Space struct {
 	Name    string
 	Guid    string
 	OrgGuid string
+	Role    string
 }
 
 type Org struct {
@@ -191,7 +193,7 @@ func (c *cfConnector) LoginURL(scopes connector.Scopes, callbackURL, state strin
 	return oauth2Config.AuthCodeURL(state), nil
 }
 
-func fetchRoleSpaces(baseUrl, path string, client *http.Client) ([]Space, error) {
+func fetchRoleSpaces(baseUrl, path, role string, client *http.Client) ([]Space, error) {
 	var spaces []Space
 
 	resources, err := fetchResources(baseUrl, path, client)
@@ -204,6 +206,7 @@ func fetchRoleSpaces(baseUrl, path string, client *http.Client) ([]Space, error)
 			Name:    resource.Entity.Name,
 			Guid:    resource.Metadata.Guid,
 			OrgGuid: resource.Entity.OrganizationGuid,
+			Role:    role,
 		})
 	}
 
@@ -267,29 +270,35 @@ func getGroupsClaims(orgs []Org, spaces []Space) (groupsClaims []string) {
 
 	var (
 		orgMap    = map[string]string{}
-		orgSpaces = map[string][]string{}
+		orgSpaces = map[string][]Space{}
+		groups    = map[string]bool{}
 	)
 
 	for _, org := range orgs {
 		orgMap[org.Guid] = org.Name
-		orgSpaces[org.Name] = []string{}
+		orgSpaces[org.Name] = []Space{}
 	}
 
 	for _, space := range spaces {
 		orgName := orgMap[space.OrgGuid]
-		orgSpaces[orgName] = append(orgSpaces[orgName], space.Name)
-		groupsClaims = append(groupsClaims, space.Guid)
+		orgSpaces[orgName] = append(orgSpaces[orgName], space)
+		groups[space.Guid] = true
 	}
 
-	for orgName, spaceNames := range orgSpaces {
-		if len(spaceNames) > 0 {
-			for _, spaceName := range spaceNames {
-				groupsClaims = append(groupsClaims, fmt.Sprintf("%s:%s", orgName, spaceName))
-			}
-		} else {
-			groupsClaims = append(groupsClaims, fmt.Sprintf("%s", orgName))
+	for orgName, spaces := range orgSpaces {
+		groups[fmt.Sprintf("%s", orgName)] = true
+		for _, space := range spaces {
+			groups[fmt.Sprintf("%s:%s", orgName, space.Name)] = true
+			groups[fmt.Sprintf("%s:%s:%s", orgName, space.Name, space.Role)] = true
 		}
 	}
+
+	for group, _ := range groups {
+		groupsClaims = append(groupsClaims, group)
+	}
+
+	sort.Strings(groupsClaims)
+
 	return groupsClaims
 }
 
@@ -354,17 +363,17 @@ func (c *cfConnector) HandleCallback(s connector.Scopes, r *http.Request) (ident
 			return identity, fmt.Errorf("failed to fetch organizaitons: %v", err)
 		}
 
-		developerSpaces, err := fetchRoleSpaces(c.apiURL, devPath, client)
+		developerSpaces, err := fetchRoleSpaces(c.apiURL, devPath, "developer", client)
 		if err != nil {
 			return identity, fmt.Errorf("failed to fetch spaces for developer roles: %v", err)
 		}
 
-		auditorSpaces, err := fetchRoleSpaces(c.apiURL, auditorPath, client)
+		auditorSpaces, err := fetchRoleSpaces(c.apiURL, auditorPath, "auditor", client)
 		if err != nil {
 			return identity, fmt.Errorf("failed to fetch spaces for developer roles: %v", err)
 		}
 
-		managerSpaces, err := fetchRoleSpaces(c.apiURL, managerPath, client)
+		managerSpaces, err := fetchRoleSpaces(c.apiURL, managerPath, "manager", client)
 		if err != nil {
 			return identity, fmt.Errorf("failed to fetch spaces for developer roles: %v", err)
 		}
