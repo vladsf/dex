@@ -119,6 +119,7 @@ const (
 	grantTypeAuthorizationCode = "authorization_code"
 	grantTypeRefreshToken      = "refresh_token"
 	grantTypePassword          = "password"
+	grantTypeClientCredentials = "client_credentials"
 )
 
 const (
