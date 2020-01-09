@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dexidp/dex/connector"
-	"github.com/dexidp/dex/pkg/groups"
-	"github.com/dexidp/dex/pkg/log"
+	"github.com/concourse/dex/connector"
+	"github.com/concourse/dex/pkg/groups"
+	"github.com/concourse/dex/pkg/log"
 
-	"github.com/dexidp/dex/storage/kubernetes/k8sapi"
+	"github.com/concourse/dex/storage/kubernetes/k8sapi"
 
 	"golang.org/x/oauth2"
 )

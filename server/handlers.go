@@ -1237,7 +1237,6 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
 	claims := storage.Claims{
 		UserID:        identity.UserID,
 		Username:      identity.Username,
-		Name:          identity.Name,
 		Email:         identity.Email,
 		EmailVerified: identity.EmailVerified,
 		Groups:        identity.Groups,
