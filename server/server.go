@@ -103,7 +103,7 @@ type WebConfig struct {
 	//   * templates - HTML templates controlled by dex.
 	//   * themes/(theme) - Static static served at "( issuer URL )/theme".
 	//
-	Dir http.Dir
+	Dir http.FileSystem
 
 	// Defaults to "( issuer URL )/theme/logo.png"
 	LogoURL string
@@ -190,7 +190,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 		supported[respType] = true
 	}
 
-	tmpls, err := loadTemplates(c.Web, c.Issuer)
+	tmpls, err := loadTemplates(c.Web, issuerURL.Path)
 	if err != nil {
 		return nil, fmt.Errorf("server: failed to templates: %v", err)
 	}

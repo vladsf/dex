@@ -48,7 +48,7 @@ type webConfig struct {
 // }
 
 // loadTemplates parses the expected templates from the provided directory.
-func loadTemplates(c WebConfig, issuerURL string) (*templates, error) {
+func loadTemplates(c WebConfig, issuerPath string) (*templates, error) {
 	if c.Theme == "" {
 		c.Theme = "coreos"
 	}
@@ -64,9 +64,10 @@ func loadTemplates(c WebConfig, issuerURL string) (*templates, error) {
 	funcs := template.FuncMap{
 		"issuer": func() string { return c.Issuer },
 		"logo":   func() string { return c.LogoURL },
-		// "static": func(s string) string { return relativeURL(issuerURL, "static", s) },
-		// "theme":  func(s string) string { return relativeURL(issuerURL, "themes", c.Theme, s) },
-		"url":   func(reqPath, assetPath string) string { return relativeURL(issuerURL, reqPath, assetPath) },
+		"theme": func(reqPath, assetPath string) string {
+			return relativeURL(issuerPath, reqPath, path.Join("themes", c.Theme, assetPath))
+		},
+		"url":   func(reqPath, assetPath string) string { return relativeURL(issuerPath, reqPath, assetPath) },
 		"lower": strings.ToLower,
 		"extra": func(k string) string { return c.Extra[k] },
 	}

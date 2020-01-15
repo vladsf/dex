@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/ghodss/yaml"
@@ -73,7 +72,6 @@ web:
   http: 127.0.0.1:5556
 
 frontend:
-  dir: ./web
   extra:
     foo: bar
 
@@ -142,7 +140,6 @@ logger:
 			HTTP: "127.0.0.1:5556",
 		},
 		Frontend: server.WebConfig{
-			Dir: http.Dir("./web"),
 			Extra: map[string]string{
 				"foo": "bar",
 			},
