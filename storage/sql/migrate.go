@@ -187,4 +187,21 @@ var migrations = []migration{
 			);
 		`,
 	},
+	{
+		stmts: []string{`
+			create table session (
+			  id text not null primary key,
+				connector_id text not null,
+
+				claims_user_id text not null,
+				claims_username text not null,
+				claims_email text not null,
+				claims_email_verified boolean not null,
+				claims_groups bytea not null, -- JSON array of strings
+
+				created_at timestamptz not null default '0001-01-01 00:00:00 UTC',
+				expires_at timestamptz not null default '0001-01-01 00:00:00 UTC'
+			);`,
+		},
+	},
 }

@@ -717,6 +717,90 @@ func scanOfflineSessions(s scanner) (o storage.OfflineSessions, err error) {
 	return o, nil
 }
 
+func (c *conn) CreateSession(s storage.Session) error {
+	_, err := c.Exec(`
+		insert into session (
+			id, connector_id,
+			claims_user_id, claims_username,
+			claims_email, claims_email_verified,
+			claims_groups,
+			created_at, expires_at
+		)
+		values (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9
+		);
+	`,
+		s.ID, s.ConnectorID,
+		s.Claims.UserID, s.Claims.Username,
+		s.Claims.Email, s.Claims.EmailVerified,
+		s.Claims.Groups,
+		s.CreatedAt, s.ExpiresAt,
+	)
+	if err != nil {
+		if c.alreadyExistsCheck(err) {
+			return storage.ErrAlreadyExists
+		}
+		return fmt.Errorf("insert session: %v", err)
+	}
+	return nil
+}
+
+func (c *conn) UpdateSession(id string, updater func(s storage.Session) (storage.Session, error)) error {
+	return c.ExecTx(func(tx *trans) error {
+		s, err := getSession(tx, id)
+		if err != nil {
+			return err
+		}
+
+		newSession, err := updater(s)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(`
+			update session
+			set
+			  connector_id = $1,
+			  claims_user_id = $2, claims_username = $3,
+			  claims_email = $4, claims_email_verified = $5,
+			  claims_groups = $6,
+			  created_at = $7, expires_at = $8
+			where id = $9;
+		`,
+			newSession.CreatedAt, newSession.LastLogin, s.UserID, s.ConnID,
+		)
+		if err != nil {
+			return fmt.Errorf("update offline session: %v", err)
+		}
+		return nil
+	})
+}
+
+func (c *conn) GetSession(userID string, connID string) (storage.Session, error) {
+	return getSession(c, userID, connID)
+}
+
+func getSession(q querier, userID string, connID string) (storage.Session, error) {
+	return scanSession(q.QueryRow(`
+		select
+			user_id, conn_id, created_at, last_login
+		from session
+		where user_id = $1 AND conn_id = $2;
+		`, userID, connID))
+}
+
+func scanSession(s scanner) (o storage.Session, err error) {
+	err = s.Scan(
+		&o.UserID, &o.ConnID, &o.CreatedAt, &o.LastLogin,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return o, storage.ErrNotFound
+		}
+		return o, fmt.Errorf("select session: %v", err)
+	}
+	return o, nil
+}
+
 func (c *conn) CreateConnector(connector storage.Connector) error {
 	_, err := c.Exec(`
 		insert into connector (

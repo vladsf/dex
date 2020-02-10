@@ -54,6 +54,7 @@ type Storage interface {
 	CreatePassword(p Password) error
 	CreateOfflineSessions(s OfflineSessions) error
 	CreateConnector(c Connector) error
+	CreateSession(s Session) error
 
 	// TODO(ericchiang): return (T, bool, error) so we can indicate not found
 	// requests that way instead of using ErrNotFound.
@@ -65,11 +66,13 @@ type Storage interface {
 	GetPassword(email string) (Password, error)
 	GetOfflineSessions(userID string, connID string) (OfflineSessions, error)
 	GetConnector(id string) (Connector, error)
+	GetSession(userID string, connID string) (Session, error)
 
 	ListClients() ([]Client, error)
 	ListRefreshTokens() ([]RefreshToken, error)
 	ListPasswords() ([]Password, error)
 	ListConnectors() ([]Connector, error)
+	ListSessions() ([]Session, error)
 
 	// Delete methods MUST be atomic.
 	DeleteAuthRequest(id string) error
@@ -79,6 +82,7 @@ type Storage interface {
 	DeletePassword(email string) error
 	DeleteOfflineSessions(userID string, connID string) error
 	DeleteConnector(id string) error
+	DeleteSession(userID string, connID string) error
 
 	// Update methods take a function for updating an object then performs that update within
 	// a transaction. "updater" functions may be called multiple times by a single update call.
@@ -101,6 +105,7 @@ type Storage interface {
 	UpdatePassword(email string, updater func(p Password) (Password, error)) error
 	UpdateOfflineSessions(userID string, connID string, updater func(s OfflineSessions) (OfflineSessions, error)) error
 	UpdateConnector(id string, updater func(c Connector) (Connector, error)) error
+	UpdateSession(userID string, connID string, updater func(s Session) (Session, error)) error
 
 	// GarbageCollect deletes all expired AuthCodes and AuthRequests.
 	GarbageCollect(now time.Time) (GCResult, error)
@@ -274,6 +279,20 @@ type OfflineSessions struct {
 	// Refresh is a hash table of refresh token reference objects
 	// indexed by the ClientID of the refresh token.
 	Refresh map[string]*RefreshTokenRef
+}
+
+// TODO: complete godocs
+// Session objects are used to track user logins.
+type Session struct {
+	ID string
+
+	// The ID of the connector used to login the user.
+	ConnectorID string
+
+	CreatedAt time.Time
+	ExpiresAt time.Time
+
+	Claims Claims
 }
 
 // Password is an email to password mapping managed by the storage.

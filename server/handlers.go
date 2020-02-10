@@ -857,7 +857,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request, client s
 
 		}
 	}
-	s.writeAccessToken(w, idToken, accessToken, refreshToken, expiry)
+	s.finalizeAccessToken(w, idToken, accessToken, refreshToken, expiry, authCode.Claims, authCode.ConnectorID)
 }
 
 // handle a refresh token request https://tools.ietf.org/html/rfc6749#section-6
@@ -1031,7 +1031,7 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
 		return
 	}
 
-	s.writeAccessToken(w, idToken, accessToken, rawNewToken, expiry)
+	s.finalizeAccessToken(w, idToken, accessToken, rawNewToken, expiry, claims, refresh.ConnectorID)
 }
 
 func (s *Server) handleClientCredentialsGrant(w http.ResponseWriter, r *http.Request, client storage.Client) {
@@ -1054,7 +1054,7 @@ func (s *Server) handleClientCredentialsGrant(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	s.writeAccessToken(w, idToken, accessToken, "", expiry)
+	s.finalizeAccessToken(w, idToken, accessToken, "", expiry, claims, "client")
 }
 
 func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, client storage.Client) {
@@ -1271,6 +1271,12 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
 		}
 	}
 
+	s.finalizeAccessToken(w, idToken, accessToken, refreshToken, expiry, claims, connID)
+}
+
+func (s *Server) finalizeAccessToken(w http.ResponseWriter, idToken, accessToken, refreshToken string, expiry time.Time, claims storage.Claims, connectorID string) {
+	// Write the session to the storage
+	session := storage.Session{}
 	s.writeAccessToken(w, idToken, accessToken, refreshToken, expiry)
 }
 
