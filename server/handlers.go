@@ -16,6 +16,7 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 	jose "gopkg.in/square/go-jose.v2"
 
 	"github.com/dexidp/dex/connector"
@@ -752,7 +753,13 @@ func (s *Server) handleToken(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if client.Secret != clientSecret {
+
+	if err := checkCost([]byte(client.Secret)); err != nil {
+		s.logger.Errorf("failed to check cost of client secret: %v", err)
+		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(client.Secret), []byte(clientSecret)); err != nil {
 		s.tokenErrHelper(w, errInvalidClient, "Invalid client credentials.", http.StatusUnauthorized)
 		return
 	}
