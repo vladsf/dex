@@ -78,6 +78,7 @@ Dex implements the following connectors:
 | [OpenShift](Documentation/connectors/openshift.md) | no | yes | no | stable | |
 | [Atlassian Crowd](Documentation/connectors/atlassiancrowd.md) | yes | yes | yes *) | beta | preferred_username claim must be configured through config |
 | [Gitea](Documentation/connectors/gitea.md) | yes | no | yes | alpha | |
+| [Generic OAuth 2.0](Documentation/connectors/oauth.md) | no | yes | yes | beta |
 
 Stable, beta, and alpha are defined as:
 
