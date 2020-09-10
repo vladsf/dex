@@ -11,49 +11,19 @@ git fetch upstream master
 
 function rebase_target() {
   case $1 in
-  pr/add-name-claim)
+  pr/client-credentials-grant-sync)
     echo upstream/master
     ;;
-  pr/add-cf-connector)
+  pr/add-cf-connector-sync)
     echo pr/add-name-claim
     ;;
-  pr/add-oauth-connector)
+  pr/oidc-CA-configure-sync)
     echo pr/add-name-claim
     ;;
-  pr/add-web-host-url)
+  pr/add-oauth-connector-sync)
     echo pr/password-grant
     ;;
-  pr/password-grant)
-    echo upstream/master
-    ;;
-  pr/github-team-name-and-slug)
-    echo upstream/master
-    ;;
-  pr/gitlab-broken-auth-headers)
-    echo upstream/master
-    ;;
-  pr/gitlab-include-user-scope-*)
-    echo upstream/master
-    ;;
-  pr/oidc-groups-and-tls)
-    echo pr/add-name-claim
-    ;;
-  pr/optional-prometheus-logger)
-    echo upstream/master
-    ;;
-  pr/postgres-unix-sockets)
-    echo upstream/master
-    ;;
-  pr/unset-pg-serializable-transaction-level)
-    echo upstream/master
-    ;;
-  pr/remove-mysql-cockroachdb-drivers)
-    echo upstream/master
-    ;;
-  pr/fix-conformance-time-comparison)
-    echo upstream/master
-    ;;
-  pr/retry-on-pg-serialization-error)
+  pr/http-filesystem)
     echo upstream/master
     ;;
   *)
