@@ -15,13 +15,13 @@ function rebase_target() {
     echo upstream/master
     ;;
   pr/add-cf-connector-sync)
-    echo pr/add-name-claim
+    echo upstream/master
     ;;
   pr/oidc-CA-configure-sync)
-    echo pr/add-name-claim
+    echo upstream/master
     ;;
   pr/add-oauth-connector-sync)
-    echo pr/password-grant
+    echo upstream/master
     ;;
   pr/http-filesystem)
     echo upstream/master
