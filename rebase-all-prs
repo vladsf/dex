@@ -45,4 +45,4 @@ $(dirname $0)/list-pr-branches | while read b _; do
   rebase_target $b | xargs git rebase
 done
 
-git co maintenance
+git checkout maintenance
