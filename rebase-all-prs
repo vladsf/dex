@@ -38,8 +38,8 @@ $(dirname $0)/list-pr-branches | while read b _; do
   git checkout $b
   target=$(rebase_target $b)
   if [ -z "$target" ]; then
-    echo "unknown rebase target for $b"
-    exit 1
+    echo "Skipping rebase for $target"
+    continue
   fi
 
   rebase_target $b | xargs git rebase
