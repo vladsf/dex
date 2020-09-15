@@ -23,7 +23,10 @@ function rebase_target() {
   pr/add-oauth-connector-sync)
     echo upstream/master
     ;;
-  pr/http-filesystem)
+  pr/http-filesystem-synced)
+    echo upstream/master
+    ;;
+  pr/bcrypt-for-client-secret)
     echo upstream/master
     ;;
   *)
