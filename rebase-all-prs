@@ -9,40 +9,9 @@ source $(dirname $0)/common.sh
 git fetch origin
 git fetch upstream master
 
-function rebase_target() {
-  case $1 in
-  pr/client-credentials-grant-sync)
-    echo upstream/master
-    ;;
-  pr/add-cf-connector-sync)
-    echo upstream/master
-    ;;
-  pr/oidc-CA-configure-sync)
-    echo upstream/master
-    ;;
-  pr/add-oauth-connector-sync)
-    echo upstream/master
-    ;;
-  pr/http-filesystem-synced)
-    echo upstream/master
-    ;;
-  pr/bcrypt-for-client-secret)
-    echo upstream/master
-    ;;
-  *)
-    ;;
-  esac
-}
-
 $(dirname $0)/list-pr-branches | while read b _; do
   git checkout $b
-  target=$(rebase_target $b)
-  if [ -z "$target" ]; then
-    echo "Skipping rebase for $target"
-    continue
-  fi
-
-  rebase_target $b | xargs git rebase
+  git rebase upstream/master $b
 done
 
 git checkout maintenance

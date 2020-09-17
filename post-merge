@@ -20,3 +20,5 @@ git tag $tag_name
 git push origin $tag_name
 
 progress "done!"
+
+echo "$tag_name" > "tag_name"
