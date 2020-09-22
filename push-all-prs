@@ -1,5 +1,0 @@
-#!/bin/bash
-
-$(dirname $0)/list-pr-branches | while read b _; do
-  git push -f origin $b:$b;
-done

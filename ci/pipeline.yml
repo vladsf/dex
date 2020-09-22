@@ -1,0 +1,43 @@
+resources:
+#  - name: dex-github-release
+#    type: github-release
+#    icon: &release-icon package-variant-closed
+#    access_token: ((concourse_github_release.access_token))
+
+  - name: concourse-dex
+    type: git
+    icon: github
+    source:
+      uri: git@github.com:concourse/dex.git
+      branch: maintenance
+      private_key:
+
+jobs:
+  - name: update-prs
+    plan:
+      - in_parallel:
+#          - get: dex-github-release
+#            trigger: true
+          - get: concourse-dex
+      - task: rebase-and-push
+        file: concourse-dex/ci/rebase-and-push-dex-prs.yml
+        params:
+          CONCOURSE_DEX_DEPLOY_KEY: ((concourse_dex_deploy_key))
+      - task: create-merged-tag
+        file: concourse-dex/ci/create-dex-merged-tag.yml
+        params:
+          CONCOURSE_DEX_DEPLOY_KEY: ((concourse_dex_deploy_key))
+      - task: update-concourse-dex-module
+        config:
+          platform: linux
+          image_resource:
+            source:
+              repository: concourse/unit
+              type: registry-image
+          inputs: [{name: concourse-dex-tag}]
+          run:
+            path: sh
+            args:
+            - -exc
+            - |
+              cat concourse-dex-tag/tag-name

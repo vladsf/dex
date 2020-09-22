@@ -1,0 +1,18 @@
+---
+platform: linux
+
+image_resource:
+  type: registry-image
+  source: {repository: concourse/unit}
+
+inputs:
+  - name: concourse-dex
+
+params:
+  CONCOURSE_DEX_DEPLOY_KEY:
+
+outputs:
+  - name: concourse-dex-tag
+
+run:
+  path: concourse-dex/ci/scripts/create-dex-merged-tag

@@ -2,9 +2,20 @@
 
 set -e -u
 
-source $(dirname $0)/common.sh
+pushd concourse-dex/ci/scripts
+source common.sh
 
+progress "fetching origin to sync pr branches"
+git fetch origin
+git remote update origin --prune
+
+progress "fetching upstream master"
+git fetch upstream master
+
+progress "merging all PRs on fresh upstream"
 git checkout $merged_branch
+git reset --hard upstream/master
+git branch -r | grep pr/ | sed -e 's|\s*origin/||' | xargs git merge
 
 progress "rewriting all imports"
 ag --go -l github.com/dexidp/dex | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
@@ -17,8 +28,14 @@ git commit -a -m "rewrite imports to concourse fork"
 progress "tagging so that the ref is preserved after the next force-push"
 tag_name=merged-$(date "+%Y%m%d%H%M%S")
 git tag $tag_name
-git push origin $tag_name
 
-progress "done!"
+# todo tests
+make testall
 
-echo "$tag_name" > "tag_name"
+# git push origin $tag_name
+
+# progress "done!"
+#popd
+
+#echo "$tag_name" > concourse-dex-tag/tag_name
+
