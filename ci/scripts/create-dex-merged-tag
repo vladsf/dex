@@ -2,8 +2,8 @@
 
 set -e -u
 
-pushd concourse-dex/ci/scripts
-source common.sh
+pushd concourse-dex
+source ci/scripts/common.sh
 
 progress "fetching origin to sync pr branches"
 git fetch origin
@@ -18,7 +18,7 @@ git reset --hard upstream/master
 git branch -r | grep pr/ | sed -e 's|\s*origin/||' | xargs git merge
 
 progress "rewriting all imports"
-ag --go -l github.com/dexidp/dex | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
+grep -r -l --include="*.go" "github.com/dexidp/dex" . | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
 
 progress "rewriting module name"
 sed -i -e 's|module github.com/dexidp/dex|module github.com/concourse/dex|g' go.mod
