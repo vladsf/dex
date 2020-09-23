@@ -8,9 +8,6 @@ cd concourse-dex/ci/scripts
 
 source common.sh
 
-git config --global user.email "ci@localhost"
-git config --global user.name "CI Bot"
-
 git fetch origin
 git fetch upstream master
 
