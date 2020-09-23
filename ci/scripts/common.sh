@@ -19,6 +19,7 @@ function progress() {
   echo $'\e[1m'"$@"$'\e[0m'
 }
 
+set +x
 if ! git remote | grep upstream >/dev/null; then
   git remote add upstream https://github.com/dexidp/dex
 fi
@@ -31,3 +32,4 @@ chmod 400 key
 eval $(ssh-agent) >/dev/null 2>&1
 trap "kill $SSH_AGENT_PID" EXIT
 ssh-add key
+set -x

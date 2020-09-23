@@ -10,7 +10,7 @@ resources:
     source:
       uri: git@github.com:concourse/dex.git
       branch: maintenance
-      private_key:
+      private_key: ((concourse_dex_deploy_key))
 
 jobs:
   - name: update-prs
