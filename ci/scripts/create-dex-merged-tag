@@ -17,6 +17,9 @@ git checkout $merged_branch
 git reset --hard upstream/master
 git branch -r | grep pr/ | sed -e 's|\s*origin/||' | xargs git merge
 
+# making sure all tests are passed
+make testall
+
 progress "rewriting all imports"
 grep -r -l --include="*.go" "github.com/dexidp/dex" . | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
 
@@ -29,8 +32,6 @@ progress "tagging so that the ref is preserved after the next force-push"
 tag_name=merged-$(date "+%Y%m%d%H%M%S")
 git tag $tag_name
 
-# todo tests
-make testall
 
 # git push origin $tag_name
 
