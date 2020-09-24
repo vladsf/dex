@@ -19,11 +19,11 @@ function progress() {
   echo $'\e[1m'"$@"$'\e[0m'
 }
 
-set +x
+function list-pr-branches() {
+  git branch -r | grep pr/ | sed -e 's|\s*origin/||'
+}
 
-if ! git remote | grep upstream >/dev/null; then
-  git remote add upstream https://github.com/dexidp/dex
-fi
+set +x
 
 mkdir ~/.ssh
 ssh-keyscan -H github.com >> ~/.ssh/known_hosts
@@ -36,5 +36,12 @@ ssh-add key
 
 git config --global user.email "ci@localhost"
 git config --global user.name "CI Bot"
+
+if ! git remote | grep upstream >/dev/null; then
+  git remote add upstream https://github.com/dexidp/dex
+fi
+
+git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+git remote update origin --prune >/dev/null
 
 set -x

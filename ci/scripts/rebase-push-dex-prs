@@ -11,7 +11,7 @@ source common.sh
 git fetch origin
 git fetch upstream master
 
-./list-pr-branches | while read b _; do
+list-pr-branches | while read b _; do
   git checkout $b
   git rebase upstream/master $b
   git push -f origin $b:$b;

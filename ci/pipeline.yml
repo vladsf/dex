@@ -12,6 +12,14 @@ resources:
       branch: maintenance
       private_key: ((concourse_dex_deploy_key))
 
+  - name: concourse
+    type: git
+    icon: github
+    source:
+      uri: git@github.com:concourse/dex.git
+      branch: master
+      private_key: ((concourse_repo_private_key))
+
 jobs:
   - name: update-prs
     plan:
@@ -19,6 +27,7 @@ jobs:
 #          - get: dex-github-release
 #            trigger: true
           - get: concourse-dex
+          - get: concourse
       - task: rebase-and-push
         file: concourse-dex/ci/rebase-and-push-dex-prs.yml
         params:
@@ -28,16 +37,6 @@ jobs:
         params:
           CONCOURSE_DEX_DEPLOY_KEY: ((concourse_dex_deploy_key))
       - task: update-concourse-dex-module
-        config:
-          platform: linux
-          image_resource:
-            source:
-              repository: concourse/unit
-              type: registry-image
-          inputs: [{name: concourse-dex-tag}]
-          run:
-            path: sh
-            args:
-            - -exc
-            - |
-              cat concourse-dex-tag/tag-name
+        file: concourse-dex/ci/update-concourse-dex-module.yml
+        params:
+          GITHUB_TOKEN: ((concourse_github_dummy.access_token))

@@ -2,6 +2,4 @@
 
 set -e
 
-git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-git remote update origin --prune >/dev/null
 git branch -r | grep pr/ | sed -e 's|\s*origin/||'

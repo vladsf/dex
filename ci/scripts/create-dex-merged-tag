@@ -15,7 +15,7 @@ git fetch upstream master
 progress "merging all PRs on fresh upstream"
 git checkout $merged_branch
 git reset --hard upstream/master
-git branch -r | grep pr/ | sed -e 's|\s*origin/||' | xargs git merge
+list-pr-branches | xargs git merge
 
 # making sure all tests are passed
 make testall

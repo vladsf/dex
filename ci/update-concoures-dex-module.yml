@@ -1,0 +1,16 @@
+---
+platform: linux
+
+image_resource:
+  type: registry-image
+  source: {repository: concourse/unit}
+
+inputs:
+  - name: concourse
+  - name: concourse-dex-tag
+
+params:
+  GITHUB_TOKEN:
+
+run:
+  path: concourse-dex/ci/scripts/update-concourse-dex-module
