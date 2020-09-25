@@ -754,14 +754,16 @@ func (s *Server) handleToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := checkCost([]byte(client.Secret)); err != nil {
-		s.logger.Errorf("failed to check cost of client secret: %v", err)
-		s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
-		return
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(client.Secret), []byte(clientSecret)); err != nil {
-		s.tokenErrHelper(w, errInvalidClient, "Invalid client credentials.", http.StatusUnauthorized)
-		return
+	if client.Secret != "" {
+		if err := checkCost([]byte(client.Secret)); err != nil {
+			s.logger.Errorf("failed to check cost of client secret: %v", err)
+			s.tokenErrHelper(w, errServerError, "", http.StatusInternalServerError)
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(client.Secret), []byte(clientSecret)); err != nil {
+			s.tokenErrHelper(w, errInvalidClient, "Invalid client credentials.", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	grantType := r.PostFormValue("grant_type")
