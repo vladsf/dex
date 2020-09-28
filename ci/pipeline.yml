@@ -1,8 +1,11 @@
 resources:
-#  - name: dex-github-release
-#    type: github-release
-#    icon: &release-icon package-variant-closed
-#    access_token: ((concourse_github_release.access_token))
+  - name: dex-github-release
+    type: github-release
+    icon: &release-icon package-variant-closed
+    source:
+      owner: dexidp
+      repository: dex
+      access_token: ((concourse_github_dummy.access_token))
 
   - name: concourse-dex
     type: git
@@ -24,8 +27,8 @@ jobs:
   - name: update-prs
     plan:
       - in_parallel:
-#          - get: dex-github-release
-#            trigger: true
+          - get: dex-github-release
+            trigger: true
           - get: concourse-dex
           - get: concourse
       - task: rebase-and-push
@@ -33,10 +36,6 @@ jobs:
         params:
           CONCOURSE_DEX_DEPLOY_KEY: ((concourse_dex_deploy_key))
       - task: create-merged-tag
-        file: concourse-dex/ci/create-dex-merged-tag.yml
+        file: concourse-dex/ci/create-merged-tag.yml
         params:
           CONCOURSE_DEX_DEPLOY_KEY: ((concourse_dex_deploy_key))
-      - task: update-concourse-dex-module
-        file: concourse-dex/ci/update-concourse-dex-module.yml
-        params:
-          GITHUB_TOKEN: ((concourse_github_dummy.access_token))

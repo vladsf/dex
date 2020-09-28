@@ -1,7 +1,5 @@
 #!/bin/bash
 
-merged_branch=master
-
 function abort() {
   echo $'\e[31m'"$@"$'\e[0m' >&2
   exit 1
@@ -20,7 +18,7 @@ function progress() {
 }
 
 function list-pr-branches() {
-  git branch -r | grep pr/
+  git branch -r | grep pr/  | sed -e 's|\s*origin/||'
 }
 
 set +x
@@ -28,6 +26,7 @@ set +x
 mkdir ~/.ssh
 ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 echo "$CONCOURSE_DEX_DEPLOY_KEY" > ~/.ssh/id_rsa
+chmod 400 ~/.ssh/id_rsa
 
 git config --global user.email "ci@localhost"
 git config --global user.name "CI Bot"

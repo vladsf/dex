@@ -7,12 +7,10 @@ image_resource:
 
 inputs:
   - name: concourse-dex
+  - name: dex-github-release
 
 params:
   CONCOURSE_DEX_DEPLOY_KEY:
 
-outputs:
-  - name: concourse-dex-tag
-
 run:
-  path: concourse-dex/ci/scripts/create-dex-merged-tag
+  path: concourse-dex/ci/scripts/create-merged-tag

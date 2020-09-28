@@ -13,9 +13,11 @@ progress "fetching upstream master"
 git fetch upstream master
 
 progress "merging all PRs on fresh upstream"
-git checkout $merged_branch
+git checkout -b master
 git reset --hard upstream/master
-list-pr-branches | xargs git merge
+list-pr-branches | while read b _; do
+  git merge "origin/$b"
+done
 
 # making sure all tests are passed
 make testall
@@ -26,17 +28,11 @@ grep -r -l --include="*.go" "github.com/dexidp/dex" . | xargs sed -i -e 's|"gith
 progress "rewriting module name"
 sed -i -e 's|module github.com/dexidp/dex|module github.com/concourse/dex|g' go.mod
 
-git commit -a -m "rewrite imports to concourse fork"
+git commit -a -F "../dex-github-release/body"
 
 progress "tagging so that the ref is preserved after the next force-push"
-tag_name=merged-$(date "+%Y%m%d%H%M%S")
-git tag $tag_name
+semver_tag=v$(cat ../dex-github-release/version)+fork.$(date "+%Y%m%d%H%M%S")
+git tag $semver_tag
 
-
-# git push origin $tag_name
-
-# progress "done!"
-#popd
-
-#echo "$tag_name" > concourse-dex-tag/tag_name
-
+git push origin $semver_tag
+popd
