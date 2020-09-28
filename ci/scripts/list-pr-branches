@@ -1,5 +1,0 @@
-#!/bin/bash
-
-set -e
-
-git branch -r | grep pr/ | sed -e 's|\s*origin/||'

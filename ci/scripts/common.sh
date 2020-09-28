@@ -20,19 +20,14 @@ function progress() {
 }
 
 function list-pr-branches() {
-  git branch -r | grep pr/ | sed -e 's|\s*origin/||'
+  git branch -r | grep pr/
 }
 
 set +x
 
 mkdir ~/.ssh
 ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-echo "$CONCOURSE_DEX_DEPLOY_KEY" > key
-chmod 400 key
-
-eval $(ssh-agent) >/dev/null 2>&1
-trap "kill $SSH_AGENT_PID" EXIT
-ssh-add key
+echo "$CONCOURSE_DEX_DEPLOY_KEY" > ~/.ssh/id_rsa
 
 git config --global user.email "ci@localhost"
 git config --global user.name "CI Bot"
