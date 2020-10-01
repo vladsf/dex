@@ -19,14 +19,18 @@ list-pr-branches | while read b _; do
   git merge "origin/$b"
 done
 
-# making sure all tests are passed
-make testall
-
 progress "rewriting all imports"
 grep -r -l --include="*.go" "github.com/dexidp/dex" . | xargs sed -i -e 's|"github.com/dexidp/dex|"github.com/concourse/dex|g'
 
 progress "rewriting module name"
-sed -i -e 's|module github.com/dexidp/dex|module github.com/concourse/dex|g' go.mod
+grep -r -l --include="*.mod" "github.com/dexidp/dex" . | xargs sed -i -e 's|github.com/dexidp/dex|github.com/concourse/dex|g'
+
+# change api/v2 reference back to upstream
+progress "rewriting module name"
+grep -r -l '--include=*.'{go,mod} "github.com/concourse/dex/api/v2" . | xargs sed -i -e 's|github.com/concourse/dex/api/v2|github.com/dexidp/dex/api/v2|g'
+
+# making sure all tests are passed
+make testall
 
 git commit -a -F "../dex-github-release/body"
 
