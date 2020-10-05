@@ -23,7 +23,7 @@ resources:
       branch: master
       private_key: ((concourse_repo_private_key))
 
-  - name: concourse-dex-version
+  - name: fork-version
     type: semver
     source:
       initial_version: 0.1.0
@@ -42,6 +42,7 @@ jobs:
           - get: concourse-dex
           - get: concourse
           - get: concourse-dex-version
+            resource: fork-version
       - task: rebase-and-push
         file: concourse-dex/ci/rebase-and-push-dex-prs.yml
         params:
@@ -50,5 +51,5 @@ jobs:
         file: concourse-dex/ci/create-merged-tag.yml
         params:
           CONCOURSE_DEX_DEPLOY_KEY: ((concourse_dex_deploy_key))
-      - put: concourse-dex-version
+      - put: fork-version
         params: {bump: minor}
