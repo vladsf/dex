@@ -14,7 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/dexidp/dex/connector"
+	"github.com/concourse/dex/connector"
 )
 
 const envVar = "DEX_LDAP_TESTS"
