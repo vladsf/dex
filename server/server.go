@@ -110,7 +110,7 @@ type WebConfig struct {
 	//   * templates - HTML templates controlled by dex.
 	//   * themes/(theme) - Static static served at "( issuer URL )/theme".
 	//
-	Dir string
+	Dir http.FileSystem
 
 	// Defaults to "( issuer URL )/theme/logo.png"
 	LogoURL string
@@ -123,6 +123,9 @@ type WebConfig struct {
 
 	// Map of extra values passed into the templates
 	Extra map[string]string
+
+	// Defaults to issuer URL
+	HostURL string
 }
 
 func value(val, defaultValue time.Duration) time.Duration {
@@ -205,18 +208,9 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 		supported[respType] = true
 	}
 
-	web := webConfig{
-		dir:       c.Web.Dir,
-		logoURL:   c.Web.LogoURL,
-		issuerURL: c.Issuer,
-		issuer:    c.Web.Issuer,
-		theme:     c.Web.Theme,
-		extra:     c.Web.Extra,
-	}
-
-	static, theme, tmpls, err := loadWebConfig(web)
+	tmpls, err := loadTemplates(c.Web, issuerURL.Path)
 	if err != nil {
-		return nil, fmt.Errorf("server: failed to load web static: %v", err)
+		return nil, fmt.Errorf("server: failed to load templates: %v", err)
 	}
 
 	now := c.Now
@@ -335,8 +329,8 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 	handleFunc("/callback/{connector}", s.handleConnectorCallback)
 	handleFunc("/approval", s.handleApproval)
 	handle("/healthz", s.newHealthChecker(ctx))
-	handlePrefix("/static", static)
-	handlePrefix("/theme", theme)
+	handlePrefix("/", http.FileServer(c.Web.Dir))
+
 	s.mux = r
 
 	s.startKeyRotation(ctx, rotationStrategy, now)
