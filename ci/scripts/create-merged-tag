@@ -32,11 +32,20 @@ grep -r -l '--include=*.'{go,mod} "github.com/concourse/dex/api/v2" . | xargs se
 # making sure all tests are passed
 make testall
 
-git commit -a -F "../dex-github-release/body"
+cat > ./release-note <<EOF
+upstream dex release: $(cat ../dex-github-release/version)
+
+$(cat ../dex-github-release/body)
+EOF
+
+git commit -a -F "./release-note"
 
 progress "tagging so that the ref is preserved after the next force-push"
-semver_tag=v$(cat ../dex-github-release/version)+fork.$(date "+%Y%m%d%H%M%S")
-git tag $semver_tag
+version=v$(cat ../concourse-dex-version/version)
+git tag $version
 
-git push origin $semver_tag
+git push origin $version
+
+# override outdated master
+git push origin HEAD -f
 popd
