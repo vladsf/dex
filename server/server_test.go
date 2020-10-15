@@ -91,7 +91,7 @@ func newTestServer(ctx context.Context, t *testing.T, updateConfig func(c *Confi
 		Issuer:  s.URL,
 		Storage: memory.New(logger),
 		Web: WebConfig{
-			Dir: http.Dir("../web"),
+			Dir: "/web",
 		},
 		Logger:             logger,
 		PrometheusRegistry: prometheus.NewRegistry(),
@@ -129,7 +129,7 @@ func newTestServerMultipleConnectors(ctx context.Context, t *testing.T, updateCo
 		Issuer:  s.URL,
 		Storage: memory.New(logger),
 		Web: WebConfig{
-			Dir: http.Dir("../web"),
+			Dir: "/web",
 		},
 		Logger:             logger,
 		PrometheusRegistry: prometheus.NewRegistry(),
