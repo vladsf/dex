@@ -22,9 +22,11 @@ GOLANGCI_VERSION = 1.32.2
 
 build: bin/dex
 
-bin/dex:
-	@mkdir -p bin/
+generate:
 	@go generate ./...
+
+bin/dex: generate
+	@mkdir -p bin/
 	@go install -v -ldflags $(LD_FLAGS) $(REPO_PATH)/cmd/dex
 
 examples: bin/grpc-client bin/example-app
@@ -38,13 +40,13 @@ bin/example-app:
 	@cd examples/ && go install -v -ldflags $(LD_FLAGS) $(REPO_PATH)/examples/example-app
 
 .PHONY: release-binary
-release-binary:
+release-binary: generate
 	@go build -o /go/bin/dex -v -ldflags $(LD_FLAGS) $(REPO_PATH)/cmd/dex
 
-test: bin/test/kube-apiserver bin/test/etcd
+test: bin/test/kube-apiserver bin/test/etcd generate
 	@go test -v ./...
 
-testrace: bin/test/kube-apiserver bin/test/etcd
+testrace: bin/test/kube-apiserver bin/test/etcd generate
 	@go test -v --race ./...
 
 export TEST_ASSET_KUBE_APISERVER=$(abspath bin/test/kube-apiserver)
