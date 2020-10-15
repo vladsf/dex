@@ -238,6 +238,7 @@ web:
   http: 127.0.0.1:5556
 
 frontend:
+  dir: /web
   extra:
     foo: bar
 
