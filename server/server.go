@@ -18,6 +18,7 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/markbates/pkger"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/crypto/bcrypt"
 
@@ -123,6 +124,9 @@ type WebConfig struct {
 
 	// Map of extra values passed into the templates
 	Extra map[string]string
+
+	// Defaults to issuer URL
+	HostURL string
 }
 
 func value(val, defaultValue time.Duration) time.Duration {
@@ -205,18 +209,13 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 		supported[respType] = true
 	}
 
-	web := webConfig{
-		dir:       c.Web.Dir,
-		logoURL:   c.Web.LogoURL,
-		issuerURL: c.Issuer,
-		issuer:    c.Web.Issuer,
-		theme:     c.Web.Theme,
-		extra:     c.Web.Extra,
+	if c.Web.Dir == "" {
+		c.Web.Dir = pkger.Include("/web")
 	}
 
-	static, theme, tmpls, err := loadWebConfig(web)
+	tmpls, err := loadTemplates(c.Web, issuerURL.Path)
 	if err != nil {
-		return nil, fmt.Errorf("server: failed to load web static: %v", err)
+		return nil, fmt.Errorf("server: failed to load templates: %v", err)
 	}
 
 	now := c.Now
@@ -341,8 +340,12 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 	handleFunc("/callback/{connector}", s.handleConnectorCallback)
 	handleFunc("/approval", s.handleApproval)
 	handle("/healthz", s.newHealthChecker(ctx))
-	handlePrefix("/static", static)
-	handlePrefix("/theme", theme)
+
+	staticDir := path.Join(c.Web.Dir, "static")
+	themeDir := path.Join(c.Web.Dir, "themes", c.Web.Theme)
+	handlePrefix("/static", http.FileServer(pkger.Dir(staticDir)))
+	handlePrefix(path.Join("/themes", c.Web.Theme), http.FileServer(pkger.Dir(themeDir)))
+
 	s.mux = r
 
 	s.startKeyRotation(ctx, rotationStrategy, now)
