@@ -2,7 +2,7 @@
 
 set -e -u
 
-pushd concourse-dex
+pushd dex
 source ci/scripts/common.sh
 
 progress "fetching origin to sync pr branches"
