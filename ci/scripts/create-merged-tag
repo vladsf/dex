@@ -9,12 +9,13 @@ progress "fetching origin to sync pr branches"
 git fetch origin
 git remote update origin --prune
 
-progress "fetching upstream master"
-git fetch upstream master
+progress "fetching upstream release"
+upstream_release_tag=v$(cat ../dex-github-release/version)
+create-branch-track-upstream-release $upstream_release_tag
 
 progress "merging all PRs on fresh upstream"
 git checkout -b master
-git reset --hard upstream/master
+git reset --hard $upstream_release_tag
 list-pr-branches | while read b _; do
   git merge "origin/$b"
 done
@@ -33,7 +34,7 @@ grep -r -l '--include=*.'{go,mod} "github.com/concourse/dex/api/v2" . | xargs se
 make testall
 
 cat > ./release-note <<EOF
-upstream dex release: $(cat ../dex-github-release/version)
+upstream dex release: $upstream_release_tag
 
 $(cat ../dex-github-release/body)
 EOF

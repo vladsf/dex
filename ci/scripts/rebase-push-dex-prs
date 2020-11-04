@@ -4,15 +4,18 @@ set -e -x
 
 set -o pipefail
 
+upstream_release_tag=v$(cat dex-github-release/version)
+
 cd concourse-dex
 
 source ci/scripts/common.sh
 
 git fetch origin
-git fetch upstream master
+
+create-branch-track-upstream-release "$upstream_release_tag"
 
 list-pr-branches | while read b _; do
   git checkout $b
-  git rebase upstream/master
+  git rebase $upstream_release_tag
   git push -f origin $b:$b;
 done

@@ -7,6 +7,7 @@ image_resource:
 
 inputs:
   - name: concourse-dex
+  - name: dex-github-release
 
 params:
   CONCOURSE_DEX_DEPLOY_KEY:

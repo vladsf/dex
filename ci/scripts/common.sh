@@ -21,6 +21,11 @@ function list-pr-branches() {
   git branch -r | grep pr/  | sed -e 's|\s*origin/||'
 }
 
+function create-branch-track-upstream-release() {
+  git fetch upstream tag $1 --no-tags
+  git checkout -b $1 $1
+}
+
 set +x
 
 mkdir ~/.ssh
