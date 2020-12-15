@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"sigs.k8s.io/testing_frameworks/integration"
 
-	"github.com/dexidp/dex/storage"
-	"github.com/dexidp/dex/storage/conformance"
+	"github.com/concourse/dex/storage"
+	"github.com/concourse/dex/storage/conformance"
 )
 
 const kubeconfigTemplate = `apiVersion: v1
