@@ -76,7 +76,7 @@ web:
   http: 127.0.0.1:5556
 
 frontend:
-  dir: ./web
+  dir: /web
   extra:
     foo: bar
 
@@ -110,7 +110,7 @@ staticPasswords:
   hash: "$2a$10$33EMT0cVYVlPy6WAMCLsceLYjWhuHpbz5yuZxu/GAFj03J9Lytjuy"
   username: "admin"
   userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
-- email: "foo@example.com"  
+- email: "foo@example.com"
   # base64'd value of the same bcrypt hash above. We want to be able to parse both of these
   hash: "JDJhJDEwJDMzRU1UMGNWWVZsUHk2V0FNQ0xzY2VMWWpXaHVIcGJ6NXl1Wnh1L0dBRmowM0o5THl0anV5"
   username: "foo"
@@ -146,7 +146,7 @@ logger:
 			HTTP: "127.0.0.1:5556",
 		},
 		Frontend: server.WebConfig{
-			Dir: "./web",
+			Dir: "/web",
 			Extra: map[string]string{
 				"foo": "bar",
 			},
@@ -239,7 +239,7 @@ web:
   http: 127.0.0.1:5556
 
 frontend:
-  dir: ./web
+  dir: /web
   extra:
     foo: bar
 
@@ -307,7 +307,7 @@ logger:
 			HTTP: "127.0.0.1:5556",
 		},
 		Frontend: server.WebConfig{
-			Dir: "./web",
+			Dir: "/web",
 			Extra: map[string]string{
 				"foo": "bar",
 			},
