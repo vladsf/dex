@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
@@ -105,7 +106,7 @@ type Config struct {
 
 // WebConfig holds the server's frontend templates and asset configuration.
 type WebConfig struct {
-	// A filepath to web static.
+	// A file path to web static. If set, WebFS will be ignored.
 	//
 	// It is expected to contain the following directories:
 	//
@@ -114,6 +115,12 @@ type WebConfig struct {
 	//   * themes/(theme) - Static static served at "( issuer URL )/theme".
 	//
 	Dir string
+
+	// Alternative way to configure web static filesystem. Dir overrides this.
+	// It's expected to contain the same files and directories as mentioned
+	// above in Dir doc.
+	//
+	WebFS fs.FS
 
 	// Defaults to "( issuer URL )/theme/logo.png"
 	LogoURL string
@@ -231,6 +238,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 
 	web := webConfig{
 		dir:       c.Web.Dir,
+		webFS:     c.Web.WebFS,
 		logoURL:   c.Web.LogoURL,
 		issuerURL: c.Issuer,
 		issuer:    c.Web.Issuer,
@@ -370,6 +378,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
 		}
 		fmt.Fprintf(w, "Health check passed")
 	}))
+
 	handlePrefix("/static", static)
 	handlePrefix("/theme", theme)
 	s.mux = r
