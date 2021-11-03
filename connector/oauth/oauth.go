@@ -250,7 +250,9 @@ func (c *oauthConnector) addGroupsFromMap(groups map[string]bool, result map[str
 			groups[groupString] = true
 		}
 		if groupMap, ok := group.(map[string]interface{}); ok {
-			groups[groupMap["name"]] = true
+			if groupName, ok := groupMap["name"].(string); ok {
+				groups[groupName] = true
+			}
 		}
 	}
 
